@@ -1,0 +1,131 @@
+name: Build, tests & publication
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Application, démo et ARM64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - run: npm ci --prefix frontend
+      - run: npm test --prefix frontend
+      - run: npm run build:demo --prefix frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run test:demo --prefix frontend
+      - run: npm run build --prefix frontend
+      - name: Vérifier l’isolation de la démo
+        run: python3 scripts/check-production.py
+      - name: Tests Go et compilation ARM64
+        run: |
+          go -C backend mod verify
+          go -C backend vet ./...
+          go -C backend test -race -count=1 ./...
+          mkdir -p build
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go -C backend build -trimpath -ldflags='-s -w' -o ../build/okoko30-linux-arm64 ./cmd/chaudiere
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go -C backend build -trimpath -ldflags='-s -w' -o ../build/mariadb-import-linux-arm64 ./cmd/mariadb-import
+          CGO_ENABLED=0 go -C backend build -trimpath -ldflags='-s -w' -o ../build/okoko30-linux-amd64 ./cmd/chaudiere
+      - name: Navigateur contre le backend Go
+        env:
+          OKOKO_REAL_BACKEND: '1'
+          OKOKO_RAW_FIXTURE: '1'
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('backend/config.example.json').read_text())
+          data['database']='/tmp/okoko-ci.db'
+          Path('/tmp/okoko-ci.json').write_text(json.dumps(data))
+          PY
+          build/okoko30-linux-amd64 -config /tmp/okoko-ci.json > /tmp/okoko.log 2>&1 &
+          OKOKO_BROWSER_FIXTURE=1 go -C backend test -run '^TestBrowserFixtureServer$' -count=1 -v ./internal/app > /tmp/okoko-fixture.log 2>&1 &
+          fixture_pid=$!
+          trap 'curl -fsS -X POST http://127.0.0.1:8889/test-fixture/stop || true' EXIT
+          for port in 8888 8889; do
+            ready=0
+            for attempt in $(seq 1 45); do
+              if curl -fsS "http://127.0.0.1:$port/health"; then ready=1; break; fi
+              sleep 1
+            done
+            test "$ready" = 1 || { cat /tmp/okoko*.log; exit 1; }
+          done
+          npm run test:browser --prefix frontend
+          curl -fsS -X POST http://127.0.0.1:8889/test-fixture/stop
+          wait "$fixture_pid"
+          trap - EXIT
+      - name: Lanceur Windows — contrôles PowerShell
+        shell: pwsh
+        run: ./scripts/tests/Install.Tests.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test-results/
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: demo-dist
+      - name: Préparer la livraison
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python3 scripts/package-release.py
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          name: release
+          path: release/
+
+  pages:
+    name: Démo GitHub Pages
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+        id: deployment
+
+  release:
+    name: Archive téléchargeable
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+      - name: Publier la version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" release/* --title "OKOKO $RELEASE_TAG" --notes "Application locale Go + SQLite, frontend React embarqué, lanceur Windows unique et démo distincte. Consultez README.md et docs/TESTS.md dans l’archive pour les instructions et la portée des validations."

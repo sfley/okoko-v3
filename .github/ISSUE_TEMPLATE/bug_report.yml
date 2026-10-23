@@ -1,0 +1,30 @@
+name: Signaler un problème
+description: Un écran, une collecte ou une installation ne fonctionne pas comme prévu.
+body:
+  - type: markdown
+    attributes:
+      value: "Ne joignez aucun mot de passe, URL privée, configuration complète ou base de données."
+  - type: input
+    id: version
+    attributes:
+      label: Version et environnement
+      placeholder: "Ex. 3.0.1 · Windows 11 · OpenWrt ARM64 · Firefox"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Étapes pour reproduire
+      description: Où se produit le problème et quelles actions le déclenchent ?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Résultat attendu et résultat obtenu
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Capture ou message d’erreur anonymisé
