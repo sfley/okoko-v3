@@ -4,8 +4,8 @@
 
 **La chaleur, simplement.**
 
-Supervision locale d’une chaudière **ÖkoFEN Pellematic PE CONDENS**.<br>
-Un cockpit personnalisable, des historiques lisibles et des données qui restent chez vous.
+Supervision locale d’une chaudière **ÖkoFEN Pellematic > V4**.<br>
+Un tableau de bord personnalisable, des historiques lisibles et des données qui restent chez vous.
 
 [![Tests & publication](https://github.com/sfley/okoko-v3/actions/workflows/project.yml/badge.svg)](https://github.com/sfley/okoko-v3/actions/workflows/project.yml)
 [![Go](https://img.shields.io/badge/Go-1.24%2B-00ADD8?logo=go&logoColor=white)](backend/go.mod)
