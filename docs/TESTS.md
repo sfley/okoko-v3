@@ -23,9 +23,11 @@ Les captures sont celles du navigateur, avec le bandeau « Données fictives » 
 
 ## Vérifications de l’application locale
 
-`go mod verify`, `go vet`, `go test -json -count=1 ./...` et `go test -race -count=1 ./...` ont réussi : 20 tests Go réussis, le serveur facultatif de fixture étant réservé au scénario navigateur séparé. Les exécutables Linux ARM64 (application et outil d’import) et amd64 ont été compilés avec CGO désactivé ; leur format ELF statique a été contrôlé. La suite navigateur distingue les réponses simulées pour l’interface et deux scénarios utilisant le backend Go.
+`go mod verify`, `go vet`, `go test -json -count=1 ./...` et `go test -race -count=1 ./...` ont réussi : 20 tests Go réussis, le serveur facultatif de fixture étant réservé au scénario navigateur séparé. Les exécutables Linux ARM64 (application et outil d’import) et amd64 ont été compilés avec CGO désactivé ; leur format ELF statique a été contrôlé. La suite navigateur de production a réussi ses 13 scénarios, sans saut : six pages à trois tailles, cockpit complet, formats JSON réels fournis, noms HK1/HK2, température extérieure, journal paginé et conversion été/hiver. Deux scénarios utilisent effectivement Go : serveur normal sans chaudière sur le port 8890 et serveur de test isolé sur le port 8889. Le serveur de test a ensuite été arrêté et a terminé avec PASS. Les autres scénarios simulent uniquement les réponses API dans le navigateur.
 
 Le workflow `.github/workflows/project.yml` reproduit ces étapes, publie la démo sur GitHub Pages et crée les archives lors d’un tag. L’existence du workflow ne signifie pas qu’une exécution GitHub a réussi : son statut est consultable dans l’onglet Actions.
+
+L’archive `okoko30-pro.zip` a été générée puis rouverte : intégrité ZIP, SHA-256 de chaque fichier du manifeste, présence des binaires et conservation des fins de ligne CRLF du lanceur autonome vérifiées. Aucun déploiement matériel n’a été lancé.
 
 ## Limites à connaître
 

@@ -1,6 +1,6 @@
 <div align="center">
 
-# okoko<span>.</span>
+# okoko.
 
 **La chaleur, simplement.**
 
