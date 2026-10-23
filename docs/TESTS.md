@@ -8,12 +8,13 @@ Contrôles effectués le 23 octobre 2026 dans le cloud Linux amd64. La démo pub
 |---|---|
 | Tests Node (`npm test --prefix frontend`) | 7 réussis : formats météo, valeurs absentes, dates invalides, créneaux, vent, calendrier et séries fictives de la démo |
 | Build statique de démonstration | Réussi ; fichiers générés séparément dans `demo-dist/` |
-| Playwright contre les fichiers statiques sous `/okoko-v3/` | 7 scénarios réussis ; aucun scénario sauté |
+| Playwright contre les fichiers statiques sous `/okoko-v3/` | 8 scénarios réussis ; aucun scénario sauté |
 | Six pages, trois tailles | Ouvertes dans Chromium à 1440×1050, 1024×900 et 390×844 ; captures dans `docs/screenshots/` |
 | Cockpit de démo | Déplacement réel à la souris, redimensionnement au coin, retrait, ajout, sauvegarde et rechargement vérifiés |
 | Démo : navigation et isolation | Liens directs, actualisation, précédent/suivant, accès clavier au contenu, aucune requête API ou extérieure pendant la visite des six pages |
 | Démo : recharges | Ajout local, persistance, refus du doublon et remise à zéro ; clé du cockpit de production conservée |
 | Démo : imports et export | Pagination 10/10/5, ajout d’une ligne simulée, téléchargement CSV local ; sauvegarde SQLite désactivée |
+| Partage public et exploration | Métadonnées Open Graph, adresse canonique, image PNG, robots.txt et sitemap.xml vérifiés dans le navigateur/serveur statique ; aucune indexation ni audience annoncée |
 | Build frontend de production | Réussi ; fichiers statiques intégrés dans `backend/internal/web/dist/` |
 | Isolation de production | Vérification de l’absence de l’adaptateur de requête et des marqueurs de données fictives dans les bundles embarqués |
 | Lanceur Windows | 12 contrôles sous PowerShell 7.5.4/Linux : syntaxe, déblocage, reprise, invalidation d’un résultat modifié et arrêt sur erreur |
@@ -53,3 +54,9 @@ go -C backend test -race -count=1 ./...
 ```
 
 Pour les deux scénarios navigateur avec Go, suivre le lancement isolé documenté dans le workflow. Les fixtures sont réservées aux tests et ne contactent aucun équipement.
+
+## Préparation du partage communautaire — 23 octobre 2026
+
+Les huit scénarios de la démo ont été relancés avec succès après l’ajout des aperçus de partage et des fichiers d’exploration. Une recompilation de production a produit exactement les mêmes fichiers et empreintes qu’avant cette modification : la présentation publique reste limitée à la démonstration. Le code Go et ses calculs n’ont pas été modifiés ; ses tests ne sont pas présentés comme relancés pour ce changement.
+
+Les forums et moteurs de recherche externes étaient bloqués par le réseau de l’environnement. Les communautés du kit sont des points de départ, sans vérification d’activité ou de règlement. Aucun message n’a été publié chez un tiers.

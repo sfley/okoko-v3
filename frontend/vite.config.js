@@ -2,13 +2,14 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
+import { publicDemoPresentation } from './demo/presentation.js';
 export default defineConfig(({mode})=>{
   const demo=mode==='demo';
   const output=demo?'../demo-dist':'../backend/internal/web/dist';
   return {
     base:demo?'./':'/',
     define:{'import.meta.env.VITE_OKOKO_DEMO':JSON.stringify(demo)},
-    plugins:[react(),{name:'precompress',closeBundle(){
+    plugins:[react(),...(demo?[publicDemoPresentation()]:[]),{name:'precompress',closeBundle(){
       const dir=new URL(`${output}/assets/`,import.meta.url);
       for(const name of readdirSync(dir)) if(/\.(js|css)$/.test(name)) writeFileSync(new URL(name+'.gz',dir),gzipSync(readFileSync(new URL(name,dir)),{level:9}));
     }}],

@@ -139,6 +139,10 @@ Le [rapport de validation](docs/TESTS.md) distingue les contrôles réellement e
 
 [Contribuer](CONTRIBUTING.md) · [Signaler un problème](https://github.com/sfley/okoko-v3/issues) · [Architecture et API](docs/ARCHITECTURE.md)
 
+## Faire découvrir OKOKO
+
+Vous utilisez une chaudière ÖkoFEN et souhaitez partager le projet ? Le [kit de présentation](docs/COMMUNAUTE.md) propose un message pour les forums, une version courte et des communautés à explorer. Partagez la [démo publique](https://sfley.github.io/okoko-v3/), qui ne donne accès à aucune installation réelle. Les retours d’utilisateurs sont les bienvenus dans les [issues GitHub](https://github.com/sfley/okoko-v3/issues).
+
 ## Licence et origine
 
 **[Licence MIT](LICENSE)** — © 2026 sfley et contributeurs. Refonte de la version Go/SQLite fournie d’OKOKO, avec conservation du moteur et des données historiques. Le [dépôt précédent](https://github.com/sfley/okoko-project/tree/okoko-v3.0) reste séparé pour conserver son historique.

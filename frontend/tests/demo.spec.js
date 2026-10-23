@@ -102,3 +102,16 @@ test('imports paginate, simulation updates journal and CSV export stays in brows
   expect((await downloaded).suggestedFilename()).toBe('okoko-demo-bilan.csv');
   expect(api).toEqual([]);
 });
+
+test('public sharing metadata and crawl files are available without running an API',async({page,request})=>{
+  await page.goto('./');
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content',/OKOKO v3.*ÖkoFEN/);
+  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content',/données fictives/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href','https://sfley.github.io/okoko-v3/');
+  const robots=await request.get('robots.txt');expect(robots.status()).toBe(200);
+  expect(await robots.text()).toContain('Sitemap: https://sfley.github.io/okoko-v3/sitemap.xml');
+  const sitemap=await request.get('sitemap.xml');expect(sitemap.status()).toBe(200);
+  expect(await sitemap.text()).toContain('<loc>https://sfley.github.io/okoko-v3/</loc>');
+  const preview=await request.get('preview.png');expect(preview.status()).toBe(200);
+  expect((await preview.body()).subarray(0,8).toString('hex')).toBe('89504e470d0a1a0a');
+});
