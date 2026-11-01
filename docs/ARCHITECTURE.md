@@ -18,8 +18,8 @@ Le code de collecte, le schéma SQLite, les imports CSV et journaux HTTP ainsi q
 | GET | `/api/v3/history?days=1` | Mesures historiques réelles, échantillonnage temporel borné, NULL préservés |
 | GET | `/api/v3/pellets` | Mois archivés/corrigés et liste de recharges existante |
 | GET | `/api/v3/weather` | Données météo effectivement reçues de la chaudière |
-| GET | `/api/v3/transitions` | 100 dernières transitions observées |
-| GET | `/api/v3/system?page=1` | SQLite, montage NAS détecté et journal unique, 10 imports par page |
+| GET | `/api/v3/transitions` | Réponse historique : 100 transitions ; filtres et pagination avec `page`, `page_size`, `circuit`, `kind`, `days`, `q` |
+| GET | `/api/v3/system?page=1` | SQLite, montage NAS détecté et journal unique, 5 imports par page |
 | POST | `/api/v3/refills` | Ajout de recharge, validation et détection de doublon conservées |
 | POST | `/api/v3/import` | Import en arrière-plan, sans travail parallèle concurrent |
 | GET | `/api/v3/backup` | ZIP de sauvegarde SQLite cohérente et contrôlée |
@@ -40,7 +40,7 @@ Une valeur manquante apparaît comme `—`, jamais comme une mesure zéro. Les c
 
 ## Formats ÖkoFEN et heures (3.0.1)
 
-L’API d’affichage normalise les températures JSON brutes en dixièmes de degré ; lorsqu’un objet contient un facteur explicite, celui-ci fait autorité. Le moteur de consommation et le mapping CSV restent inchangés. Le champ `name` des circuits sert de libellé, sans changer les identifiants persistés du cockpit. Les mini-graphiques HK1/HK2 utilisent la requête d’historique CSV de la page.
+L’API d’affichage normalise les températures JSON brutes en dixièmes de degré ; lorsqu’un objet contient un facteur explicite, celui-ci fait autorité. Le moteur de consommation et le mapping CSV restent inchangés. Le champ `name` des circuits sert de libellé, sans changer les identifiants persistés du cockpit. Depuis la 3.0.2, les mini-graphiques HK1/HK2 sont supprimés ; Chauffage ne demande plus d’historique CSV.
 
 Les chaînes météo directes et les objets à métadonnées sont acceptés. Une date française sans année est rattachée à l’année la plus proche de la collecte, uniquement à moins de 14 jours ; les dates complètes sont conservées. Les prévisions sont normalisées avec leur jour, heure et fuseau, sans appel météo externe. Un format inconnu est laissé visible et non affecté.
 
@@ -51,3 +51,9 @@ Le journal est paginé par identifiant décroissant. L’API renvoie la date d�
 `npm run build:demo` compile une variante statique dans `demo-dist/`, avec chemins relatifs et navigation par fragment pour GitHub Pages. `frontend/demo/` fournit des données explicitement fictives et des commandes locales ; aucun appel API, chaudière ou météo externe n’est effectué. Les recharges et le cockpit utilisent des clés localStorage distinctes de celles de la production. Les téléchargements CSV sont générés dans le navigateur, sans simulation de sauvegarde SQLite.
 
 La compilation normale conserve les routes du serveur Go et élimine l’adaptateur de démo. `scripts/check-production.py` vérifie l’absence des marqueurs de données fictives dans les fichiers JavaScript embarqués. Les tests Playwright de démo servent réellement les fichiers sous `/okoko-v3/`.
+
+## Cockpit et journal (3.0.2)
+
+Le format de disposition passe à la version 2, sous les mêmes clés de stockage. Une sauvegarde locale `.before-3.0.2` protège la migration des anciens modules et de la disposition initiale. Les modules Modulation et Système sont retirés ; les autres personnalisations restent conservées. L’historique n’est demandé que si le module Températures est affiché ou si son volet est ouvert dans Analyse.
+
+Le journal paginé renvoie `events`, `pagination` et `summary`. Sans paramètre, l’API conserve l’ancien tableau limité à 100 pour les clients existants. Le tri utilise `julianday(ts)` et l’identifiant ; les dates RFC3339 à décalages différents restent dans l’ordre chronologique réel. Les filtres et compteurs s’appliquent avant pagination. Aucune observation n’est supprimée ou reconstituée.

@@ -22,6 +22,8 @@ Vous pouvez déplacer les widgets et essayer une recharge : tout reste dans votr
 
 </div>
 
+**Version 3.0.2 :** cockpit simplifié, journal d’installation enrichi, météo sur quatre jours et imports par cinq lignes. [Détail des changements](docs/CHANGEMENTS-3.0.2.md).
+
 ## Votre installation, en un regard
 
 Un thème bleu nuit, des accents orange et turquoise, des icônes SVG et une typographie embarquée. Une seule navigation, adaptée à l’ordinateur, à la tablette et au téléphone.
@@ -29,11 +31,11 @@ Un thème bleu nuit, des accents orange et turquoise, des icônes SVG et une typ
 | Page | Ce que vous y trouvez |
 |---|---|
 | **Tableau de bord** | Cockpit : ajouter, retirer, déplacer et redimensionner les modules. Disposition enregistrée automatiquement par navigateur. |
-| **Chauffage** | Chaudière, circuits HK1/HK2 nommés, eau chaude, consignes programmées, pompes et mini-courbes sur 24 heures. |
-| **Analyse** | Historiques interactifs, température extérieure, modulation, sélection des courbes et transitions observées. |
+| **Chauffage** | Chaudière, circuits HK1/HK2 nommés, eau chaude, consignes programmées, pompes et températures de départ disponibles. |
+| **Analyse** | Journal filtrable et paginé des changements observés ; historiques de température à la demande. |
 | **Pellets** | Stock, consommations, recharges et bilan mensuel/annuel dans un historique unique. |
 | **Météo** | Aujourd’hui et les trois jours suivants, à partir du JSON ÖkoFEN. Créneaux horaires uniquement lorsqu’ils sont fournis. |
-| **Système** | Collecte, SQLite, NAS facultatif, sauvegarde et journal JSON/CSV paginé par dix lignes. |
+| **Système** | Collecte, SQLite, NAS facultatif, sauvegarde et journal JSON/CSV paginé par cinq lignes. |
 
 Les modes et consignes sont consultables. Le changement des réglages reste sur la régulation ÖkoFEN : OKOKO ne transmet pas de commande de chauffage.
 

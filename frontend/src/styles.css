@@ -3206,3 +3206,74 @@ th {
 .demo-notice span {display:block;color:#bbcad2;font-size:11px;line-height:1.6;}
 .demo-notice .button {white-space:nowrap;}
 @media(max-width:600px){.demo-notice{flex-direction:column;align-items:flex-start;padding:14px;}.demo-notice .button{align-self:flex-end;}}
+
+/* 3.0.2: concentrate on comfort and observed events. */
+.circuit-flow { display:flex;justify-content:space-between;gap:12px;margin:10px 0 14px;font-size:10px;color:#8fa4b1; }
+.circuit-flow strong {color:#d0dde2;font-weight:500;white-space:nowrap;}
+.weather-four-days .weather-now {margin:3px 0 10px;}
+.widget-forecast {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:14px 0 12px;}
+.widget-forecast-day {display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 3px;background:#ffffff03;border:1px solid #ffffff06;border-radius:9px;min-width:0;}
+.widget-forecast-day > span {font-size:9px;color:#92a8b4;}
+.widget-forecast-day > strong {font-size:12px;font-weight:500;}
+.widget-forecast-day .forecast-unavailable {min-height:40px;display:grid;place-items:center;}
+.widget-weather-link {font-size:9px;justify-content:flex-end;margin-top:auto;}
+.installation-journal-widget {display:flex;flex-direction:column;height:100%;min-height:0;}
+.journal-preview {list-style:none;margin:0;padding:0;flex:1;min-height:0;overflow-y:auto;}
+.journal-preview > li {display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #263641;}
+.journal-preview > li:last-child {border-bottom:0;}
+.journal-event-content {flex:1;min-width:0;}
+.journal-event-heading {display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.journal-event-heading > strong {font-size:11px;font-weight:500;}
+.journal-event-heading > span {font-size:9px;color:#8ca2ae;}
+.journal-event-content > p {display:flex;align-items:center;gap:8px;margin:7px 0 0;font-size:10px;color:#91a5af;flex-wrap:wrap;}
+.journal-event-content > p > strong {font-weight:400;color:#c1d7d3;}
+.journal-preview time {font-size:9px;color:#829aa9;white-space:nowrap;}
+.journal-widget-footer {display:flex;gap:12px;align-items:center;justify-content:space-between;padding-top:12px;margin-top:auto;border-top:1px solid #263641;}
+.journal-widget-footer > span {font-size:9px;color:#8198a6;}
+.journal-widget-footer .text-link {font-size:10px;flex-shrink:0;}
+.widget-activity .widget-content {padding-top:2px;}
+.journal-summary {margin-bottom:22px;}
+.journal-summary .panel {padding:22px 24px;}
+.journal-summary .metric > div {font-size:32px;}
+.journal-filters {display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin:24px 0;}
+.journal-filters label {display:flex;flex-direction:column;gap:8px;font-size:10px;color:#91a5b2;min-width:0;}
+.journal-filters select {width:100%;}
+.journal-search {display:flex;align-items:flex-end;gap:8px;flex:1;min-width:190px;}
+.journal-search > label {flex:1;}
+.journal-search input {width:100%;min-width:0;padding:10px 12px;background:#0e1c27;color:#dbe6e9;border:1px solid #304552;border-radius:7px;font:inherit;}
+.transition-values {display:flex;align-items:center;gap:12px;min-width:220px;}
+.transition-values > span {color:#8fa3b0;}
+.transition-values > strong {color:#c5ddd6;font-weight:400;}
+.transition-values > svg {flex-shrink:0;color:#5d8f8b;}
+.analysis-history {border:1px solid #2b3c48;border-radius:16px;margin-top:24px;background:#111e28;}
+.analysis-history > summary {padding:22px 24px;cursor:pointer;font-size:14px;color:#cfdbdf;}
+.analysis-history > summary > span {float:right;color:#8298a6;font-size:10px;margin-top:4px;}
+.analysis-history > .panel {border:0;margin:0;}
+.collection-details {margin:18px 0 24px;}
+.collection-details > summary {cursor:pointer;color:#9eb5c0;font-size:11px;margin-bottom:12px;}
+@media(max-width:720px) {
+ .journal-preview time {white-space:normal;text-align:right;max-width:65px;line-height:1.5;}
+ .journal-preview > li {gap:8px;}
+ .journal-widget-footer {flex-wrap:wrap;}
+ .journal-widget-footer > span {display:none;}
+ .journal-widget-footer .text-link {margin-left:auto;}
+ .journal-summary {grid-template-columns:1fr;gap:10px;}
+ .journal-summary .panel {padding:14px 18px;}
+ .journal-summary .metric {display:flex;justify-content:space-between;align-items:center;}
+ .journal-summary .metric > div {font-size:26px;}
+ .journal-filters > label {flex:1;min-width:130px;}
+ .journal-search {flex-basis:100%;}
+ .analysis-history > summary > span {display:block;float:none;margin-top:8px;}
+}
+.circuit-measure-label {display:block;font-size:9px;color:#869ca9;margin-bottom:6px;}
+.circuit-reading {margin:2px 0 12px;}
+@media(max-width:720px) {
+ .transitions-table,.transitions-table tbody {display:block;width:100%;min-width:0;}
+ .transitions-table thead {position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
+ .transitions-table tbody tr {display:grid;grid-template-columns:1fr auto;gap:10px 12px;border-bottom:1px solid #293b47;padding:17px 0;}
+ .transitions-table tbody td {border:0;padding:0;white-space:normal;min-width:0;}
+ .transitions-table td:first-child {grid-column:1/-1;font-size:10px;color:#8da5b3;}
+ .transitions-table td:nth-child(3) {text-align:right;color:#8da5b3;}
+ .transitions-table td:last-child {grid-column:1/-1;}
+ .transitions-table .transition-values {min-width:0;flex-wrap:wrap;gap:9px;line-height:1.7;}
+}

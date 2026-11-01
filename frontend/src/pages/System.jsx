@@ -23,7 +23,7 @@ import {
 } from "../components/UI";
 export default function System({ snapshot }) {
   const [page, setPage] = useState(1);
-  const resource = useResource(`system?page=${page}`, 10000);
+  const resource = useResource(`system?page=${page}`, 60000);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [started, setStarted] = useState(false);
@@ -35,7 +35,7 @@ export default function System({ snapshot }) {
     try {
       await request("import", { method: "POST", body: "{}" });
       setStarted(true);
-      resource.reload();
+      if (page !== 1) setPage(1); else resource.reload();
     } catch (e) {
       setError(e.message);
     } finally {
@@ -86,7 +86,7 @@ export default function System({ snapshot }) {
         }
         description="Un état clair de votre installation. Des données qui restent chez vous."
       >
-        <Badge>OKOKO {snapshot?.version || "3.0.1"}</Badge>
+        <Badge>OKOKO {snapshot?.version || "3.0.2"}</Badge>
       </PageHeading>
       <ErrorNotice error={resource.error} retry={resource.reload} />
       <ErrorNotice error={error} />
@@ -133,10 +133,12 @@ export default function System({ snapshot }) {
           </p>
         </Card>
         <Card
-          title="Des collectes à votre rythme"
+          title="Importer les dernières données"
           eyebrow="Import JSON / CSV"
           icon="activity"
         >
+          <p className="panel-description">La collecte planifiée fonctionne en arrière-plan. Lancez un import manuel uniquement si vous souhaitez récupérer les archives maintenant.</p>
+          <details className="collection-details"><summary>Paramètres de collecte</summary>
           <KeyValue label="Lecture JSON">
             {snapshot?.poll_seconds || "—"} secondes
           </KeyValue>
@@ -147,6 +149,7 @@ export default function System({ snapshot }) {
           <KeyValue label="Import en cours">
             {s?.import_active ? "Oui" : "Non"}
           </KeyValue>
+          </details>
           <button
             className="button"
             disabled={
@@ -246,14 +249,14 @@ export default function System({ snapshot }) {
             <button className="button small" disabled={pagination.page >= pagination.pages || resource.loading} onClick={() => setPage(pagination.page + 1)}>Suivants</button>
           </div>
         </nav>}
-        <p className="small-note">10 imports par page · Horaires {s?.timezone || "Europe/Paris"}, avec changement d’heure automatique. Les imports plus anciens restent accessibles par les pages du journal.</p>
+        <p className="small-note">5 imports par page · Horaires {s?.timezone || "Europe/Paris"}, avec changement d’heure automatique. Les imports plus anciens restent accessibles par les pages du journal.</p>
       </Card>
       <div className="system-footer">
         <span>
           <Server size={15} /> Go + SQLite · Frontend embarqué · Sans Node.js
           sur le routeur
         </span>
-        <span>OKOKO {snapshot?.version || "3.0.1"}</span>
+        <span>OKOKO {snapshot?.version || "3.0.2"}</span>
       </div>
     </>
   );

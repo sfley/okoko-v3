@@ -1,62 +1,33 @@
-# Validation d’OKOKO v3
+# Rapport de validation — OKOKO 3.0.2
 
-Contrôles effectués le 23 octobre 2026 dans le cloud Linux amd64. La démo publique et l’application locale ont des compilations et des tests distincts.
+Contrôles exécutés le **1er novembre 2026**, dans le cloud Linux amd64, avec Go 1.27.3, Node.js 24, Playwright 1.56.1, Chromium et PowerShell 7.5.4.
 
-## Projet et démonstration
-
-| Contrôle exécuté | Résultat |
+| Contrôle réellement exécuté | Résultat et portée |
 |---|---|
-| Tests Node (`npm test --prefix frontend`) | 7 réussis : formats météo, valeurs absentes, dates invalides, créneaux, vent, calendrier et séries fictives de la démo |
-| Build statique de démonstration | Réussi ; fichiers générés séparément dans `demo-dist/` |
-| Playwright contre les fichiers statiques sous `/okoko-v3/` | 8 scénarios réussis ; aucun scénario sauté |
-| Six pages, trois tailles | Ouvertes dans Chromium à 1440×1050, 1024×900 et 390×844 ; captures dans `docs/screenshots/` |
-| Cockpit de démo | Déplacement réel à la souris, redimensionnement au coin, retrait, ajout, sauvegarde et rechargement vérifiés |
-| Démo : navigation et isolation | Liens directs, actualisation, précédent/suivant, accès clavier au contenu, aucune requête API ou extérieure pendant la visite des six pages |
-| Démo : recharges | Ajout local, persistance, refus du doublon et remise à zéro ; clé du cockpit de production conservée |
-| Démo : imports et export | Pagination 10/10/5, ajout d’une ligne simulée, téléchargement CSV local ; sauvegarde SQLite désactivée |
-| Partage public et exploration | Métadonnées Open Graph, adresse canonique, image PNG, robots.txt et sitemap.xml vérifiés dans le navigateur/serveur statique ; aucune indexation ni audience annoncée |
-| Build frontend de production | Réussi ; fichiers statiques intégrés dans `backend/internal/web/dist/` |
-| Isolation de production | Vérification de l’absence de l’adaptateur de requête et des marqueurs de données fictives dans les bundles embarqués |
-| Lanceur Windows | 12 contrôles sous PowerShell 7.5.4/Linux : syntaxe, déblocage, reprise, invalidation d’un résultat modifié et arrêt sur erreur |
-| Confidentialité | Recherche de l’URL/identifiant privé d’origine sans les afficher ; configurations d’exemple vides, aucune base ni configuration privée dans les sources publiables |
+| `go mod verify`, `go vet ./...` | Réussis |
+| `go test -json -count=1 ./...` | 23 tests réussis ; serveur de fixture navigateur facultatif exclu puis exécuté séparément |
+| `go test -race -count=1 ./...` | Réussi, aucune course détectée |
+| Conservation du moteur | Les 7 fonctions de référence (calculs pellets et CSV) sont identiques après normalisation Go ; empreintes dans `source-preservation.json` |
+| `npm test` | 11 tests réussis : météo, valeurs manquantes, dates, migration et sauvegarde des dispositions, conservation des personnalisations, libellés des pompes |
+| Build de démo et de production | Réussis, fichiers séparés ; données fictives absentes des bundles de production |
+| Playwright — démo statique sous `/okoko-v3/` | 9 scénarios réussis, aucun saut ; six pages à trois tailles, cockpit, navigation, recharges locales, imports, CSV, partage et journal filtrable |
+| Playwright — application Go | 13 scénarios réussis, aucun saut ; six pages aux trois tailles, cockpit, absence de valeurs inventées, consigne technique 8 °C, NAS facultatif, noms des circuits, absence de mini-courbes/requêtes inutiles, journal d’imports et heures été/hiver |
+| Serveurs Go pour navigateur | Instance réelle sans chaudière sur 127.0.0.1:8892, base temporaire ; serveur de test JSON sur 8889, parsing Go réel ; contrôle mobile supplémentaire du binaire final sur 8893 après amélioration de la présentation |
+| Journal d’installation côté Go | Accès paginé à 137 événements, filtres, recherche littérale, compteurs et compatibilité de la réponse historique ; tri correct à travers le passage à l’heure d’hiver |
+| Imports | 25 entrées parcourues sur 5 pages de 5, sans perte ni doublon |
+| ECS | Sonde basse absente conservée comme absente, valeur fournie correctement normalisée, aucun départ inventé |
+| Linux ARM64 | Application et outil d’import compilés sans CGO ; format ELF aarch64 statique contrôlé |
+| Lanceur Windows | 12 contrôles réussis sous PowerShell/Linux : syntaxe, déblocage, reprise, validation des résultats et arrêt sur erreur |
 
-Les captures sont celles du navigateur, avec le bandeau « Données fictives » visible. Les anciens résultats de livraison ne sont pas présentés comme de nouveaux essais.
+Les captures de `docs/screenshots/` proviennent de la démo effectivement ouverte dans Chromium à 1440×1050, 1024×900 et 390×844. Les courbes de température de la page Analyse sont repliées par défaut et ont aussi été ouvertes pendant les scénarios.
 
-## Vérifications de l’application locale
+## Limites restantes
 
-`go mod verify`, `go vet`, `go test -json -count=1 ./...` et `go test -race -count=1 ./...` ont réussi : 20 tests Go réussis, le serveur facultatif de fixture étant réservé au scénario navigateur séparé. Les exécutables Linux ARM64 (application et outil d’import) et amd64 ont été compilés avec CGO désactivé ; leur format ELF statique a été contrôlé. La suite navigateur de production a réussi ses 13 scénarios, sans saut : six pages à trois tailles, cockpit complet, formats JSON réels fournis, noms HK1/HK2, température extérieure, journal paginé et conversion été/hiver. Deux scénarios utilisent effectivement Go : serveur normal sans chaudière sur le port 8890 et serveur de test isolé sur le port 8889. Le serveur de test a ensuite été arrêté et a terminé avec PASS. Les autres scénarios simulent uniquement les réponses API dans le navigateur.
+- Aucun déploiement ni démarrage sur le routeur OpenWrt réel ; la compilation ARM64 ne constitue pas un essai matériel.
+- Aucun accès à la chaudière, au NAS ou à la base du propriétaire. Les CSV signalés comme constants à zéro n’ont pas été fournis pour diagnostic ; aucun mapping ni historique n’a été modifié pour deviner une valeur.
+- La console Windows 11 et ses stratégies de groupe n’ont pas été testées. Les contrôles du lanceur s’exécutent sous PowerShell/Linux.
+- Le sélecteur Windows pour un fichier `.disabled` ne peut pas être corrigé sans identifier le fichier ou l’entrée de démarrage concernés. Aucun fichier Windows n’a été supprimé ou exécuté.
+- La démo utilise uniquement des données fictives explicites. Son domaine public `github.io` est inaccessible depuis cet environnement ; les essais utilisent la même compilation statique servie localement sous le même sous-répertoire.
+- L’interface réelle reste destinée au réseau domestique de confiance, sans authentification intégrée. Dispositions propres au navigateur, sans synchronisation entre appareils.
 
-Le workflow `.github/workflows/project.yml` reproduit ces étapes, publie la démo sur GitHub Pages et crée les archives lors d’un tag. L’existence du workflow ne signifie pas qu’une exécution GitHub a réussi : son statut est consultable dans l’onglet Actions.
-
-L’archive `okoko30-pro.zip` a été générée puis rouverte : intégrité ZIP, SHA-256 de chaque fichier du manifeste, présence des binaires et conservation des fins de ligne CRLF du lanceur autonome vérifiées. Aucun déploiement matériel n’a été lancé.
-
-## Limites à connaître
-
-- Aucun démarrage ni déploiement sur le routeur OpenWrt réel dans cet environnement. Une compilation ARM64 ne constitue pas un essai matériel.
-- Aucun accès à la chaudière ni au NAS du propriétaire pendant les essais cloud.
-- Les contrôles PowerShell exécutés sous Linux ne valident pas l’affichage de la console Windows ou les stratégies de groupe d’un poste Windows réel.
-- La démo n’est pas une installation réelle : elle ne collecte rien, n’effectue aucune sauvegarde SQLite et conserve les modifications dans ce navigateur uniquement.
-- Les dispositions sont propres à chaque navigateur, sans synchronisation entre appareils. Le serveur local n’intègre pas d’authentification.
-- L’activation initiale de GitHub Pages demande le réglage « Source : GitHub Actions » par le propriétaire du dépôt.
-
-## Reproduire les contrôles
-
-```sh
-npm ci --prefix frontend
-npm test --prefix frontend
-npm run build:demo --prefix frontend
-npm run test:demo --prefix frontend
-npm run build --prefix frontend
-python3 scripts/check-production.py
-go -C backend mod verify
-go -C backend vet ./...
-go -C backend test -race -count=1 ./...
-```
-
-Pour les deux scénarios navigateur avec Go, suivre le lancement isolé documenté dans le workflow. Les fixtures sont réservées aux tests et ne contactent aucun équipement.
-
-## Préparation du partage communautaire — 23 octobre 2026
-
-Les huit scénarios de la démo ont été relancés avec succès après l’ajout des aperçus de partage et des fichiers d’exploration. Une recompilation de production a produit exactement les mêmes fichiers et empreintes qu’avant cette modification : la présentation publique reste limitée à la démonstration. Le code Go et ses calculs n’ont pas été modifiés ; ses tests ne sont pas présentés comme relancés pour ce changement.
-
-Les forums et moteurs de recherche externes étaient bloqués par le réseau de l’environnement. Les communautés du kit sont des points de départ, sans vérification d’activité ou de règlement. Aucun message n’a été publié chez un tiers.
+Les exécutions GitHub Actions et les archives publiées se vérifient séparément dans le dépôt. Une commande configurée dans le workflow n’est pas présentée ici comme exécutée avant son résultat.

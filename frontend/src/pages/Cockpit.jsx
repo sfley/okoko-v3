@@ -15,184 +15,31 @@ import {
 } from "lucide-react";
 import { useResource } from "../api";
 import { isDemo } from "../mode";
+import { LIBRARY, defaultConfig, readCockpitConfig } from "../cockpit-layout";
 import { Badge, Icon, PageHeading, SavedIndicator } from "../components/UI";
 import { HistoryChart } from "../components/Charts";
 import {
   ActivityWidget,
   BoilerWidget,
   CircuitWidget,
-  ModulationWidget,
   PelletsWidget,
-  SystemWidget,
   WeatherWidget,
 } from "../components/Widgets";
 const Grid = WidthProvider(Responsive);
-export const LIBRARY = [
-  {
-    id: "boiler",
-    name: "Chaudière",
-    sub: "Température, état et puissance",
-    w: 6,
-    h: 4,
-  },
-  {
-    id: "pellets",
-    name: "Réserve de pellets",
-    sub: "Un œil sur votre silo",
-    w: 3,
-    h: 4,
-  },
-  { id: "weather", name: "Météo", sub: "Les prévisions ÖkoFEN", w: 3, h: 4 },
-  { id: "hk1", name: "Circuit HK1", sub: "Confort et température", w: 4, h: 3 },
-  { id: "hk2", name: "Circuit HK2", sub: "Confort et température", w: 4, h: 3 },
-  {
-    id: "ecs",
-    name: "Eau chaude",
-    sub: "Eau chaude sanitaire · ECS",
-    w: 4,
-    h: 3,
-  },
-  {
-    id: "temperatures",
-    name: "Températures",
-    sub: "L’équilibre de votre maison",
-    w: 8,
-    h: 4,
-  },
-  {
-    id: "activity",
-    name: "Activité",
-    sub: "Les derniers changements",
-    w: 4,
-    h: 4,
-  },
-  {
-    id: "modulation",
-    name: "Modulation",
-    sub: "L’allure de votre chaudière",
-    w: 4,
-    h: 4,
-  },
-  {
-    id: "system",
-    name: "Système",
-    sub: "La santé de votre installation",
-    w: 4,
-    h: 4,
-  },
-];
-const DEFAULT_IDS = [
-  "boiler",
-  "pellets",
-  "weather",
-  "hk1",
-  "hk2",
-  "ecs",
-  "temperatures",
-  "activity",
-];
 const STORAGE = isDemo ? "okoko.demo.cockpit.v1" : "okoko30.cockpit.v1";
-function defaultLayout() {
-  return [
-    { i: "boiler", x: 0, y: 0, w: 6, h: 4 },
-    { i: "pellets", x: 6, y: 0, w: 3, h: 4 },
-    { i: "weather", x: 9, y: 0, w: 3, h: 4 },
-    { i: "hk1", x: 0, y: 4, w: 4, h: 3 },
-    { i: "hk2", x: 4, y: 4, w: 4, h: 3 },
-    { i: "ecs", x: 8, y: 4, w: 4, h: 3 },
-    { i: "temperatures", x: 0, y: 7, w: 8, h: 4 },
-    { i: "activity", x: 8, y: 7, w: 4, h: 4 },
-  ].map((x) => ({ ...x, minW: 2, minH: 3, maxH: 7 }));
-}
-function defaultLayouts() {
-  const lg = defaultLayout();
-  const make = (columns) => {
-    if (columns === 1) {
-      let y = 0;
-      return DEFAULT_IDS.map((id) => {
-        const item = LIBRARY.find((x) => x.id === id);
-        const row = {
-          i: id,
-          x: 0,
-          y,
-          w: 1,
-          h: item.h,
-          minW: 1,
-          minH: 3,
-          maxH: 7,
-        };
-        y += item.h;
-        return row;
-      });
-    }
-    const half = columns / 2;
-    return [
-      { i: "boiler", x: 0, y: 0, w: columns, h: 4 },
-      { i: "pellets", x: 0, y: 4, w: half, h: 4 },
-      { i: "weather", x: half, y: 4, w: half, h: 4 },
-      { i: "hk1", x: 0, y: 8, w: half, h: 3 },
-      { i: "hk2", x: half, y: 8, w: half, h: 3 },
-      { i: "ecs", x: 0, y: 11, w: columns, h: 3 },
-      { i: "temperatures", x: 0, y: 14, w: columns, h: 4 },
-      { i: "activity", x: 0, y: 18, w: columns, h: 3 },
-    ].map((row) => ({ ...row, minW: columns === 2 ? 1 : 2, minH: 3, maxH: 7 }));
-  };
-  return { lg, md: make(6), sm: make(2), xs: make(1) };
-}
-function initial() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE));
-    if (
-      saved?.version === 1 &&
-      Array.isArray(saved.ids) &&
-      saved.ids.every((id) => LIBRARY.some((x) => x.id === id)) &&
-      new Set(saved.ids).size === saved.ids.length &&
-      saved.layouts &&
-      typeof saved.layouts === "object"
-    ) {
-      const layouts = {};
-      for (const [key, rows] of Object.entries(saved.layouts))
-        if (["lg", "md", "sm", "xs"].includes(key) && Array.isArray(rows))
-          layouts[key] = rows
-            .filter(
-              (row) =>
-                saved.ids.includes(row.i) &&
-                ["x", "y", "w", "h"].every(
-                  (k) => Number.isFinite(row[k]) && row[k] >= 0,
-                ) &&
-                row.w >= 1 &&
-                row.h >= 3,
-            )
-            .map((row) => ({
-              i: row.i,
-              x: row.x,
-              y: row.y,
-              w: row.w,
-              h: row.h,
-              minW: key === "xs" || key === "sm" ? 1 : 2,
-              minH: 3,
-              maxH: 7,
-            }));
-      if (layouts.lg?.length === saved.ids.length)
-        return { ids: saved.ids, layouts };
-    }
-  } catch {
-    /* An invalid or blocked store must never prevent rendering. */
-  }
-  return { ids: DEFAULT_IDS, layouts: defaultLayouts() };
-}
+function initial() { try { return readCockpitConfig(localStorage,STORAGE); } catch { return defaultConfig(); } }
 export default function Cockpit({ snapshot, weather }) {
   const [config, setConfig] = useState(initial);
   const [editing, setEditing] = useState(false);
   const [library, setLibrary] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [reset, setReset] = useState(false);
-  const history = useResource("history?days=1", 60000);
+  const history = useResource(config.ids.includes("temperatures") ? "history?days=1" : null, 60000);
   const libraryItems = LIBRARY.map((item) => ({ ...item, name: snapshot?.circuits?.[item.id === "ecs" ? "ww1" : item.id]?.name || item.name }));
-  const transitions = useResource("transitions", 60000);
+  const transitions = useResource(config.ids.includes("activity") ? "transitions?page=1&page_size=5" : null, 30000);
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE, JSON.stringify({ version: 1, ...config }));
+      localStorage.setItem(STORAGE, JSON.stringify({ version: 2, ...config }));
       setSaveError("");
     } catch {
       setSaveError("Sauvegarde locale indisponible");
@@ -303,7 +150,6 @@ export default function Cockpit({ snapshot, weather }) {
         <CircuitWidget
           snapshot={snapshot}
           circuit={id === "ecs" ? "ww1" : id}
-          history={history.data || []}
         />
       );
     if (id === "pellets") return <PelletsWidget snapshot={snapshot} />;
@@ -312,12 +158,8 @@ export default function Cockpit({ snapshot, weather }) {
     if (id === "temperatures")
       return <HistoryChart compact data={history.data || []} snapshot={snapshot} />;
     if (id === "activity")
-      return <ActivityWidget transitions={transitions.data || []} snapshot={snapshot} />;
-    if (id === "modulation")
-      return (
-        <ModulationWidget snapshot={snapshot} history={history.data || []} />
-      );
-    return <SystemWidget snapshot={snapshot} />;
+      return <ActivityWidget data={transitions.data} error={transitions.error} retry={transitions.reload} snapshot={snapshot} />;
+    return null;
   };
   return (
     <>
@@ -559,10 +401,7 @@ export default function Cockpit({ snapshot, weather }) {
               <button
                 className="button primary"
                 onClick={() => {
-                  setConfig({
-                    ids: DEFAULT_IDS,
-                    layouts: defaultLayouts(),
-                  });
+                  setConfig(defaultConfig());
                   setReset(false);
                 }}
               >

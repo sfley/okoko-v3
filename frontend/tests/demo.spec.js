@@ -19,8 +19,9 @@ for (const viewport of [{name:'desktop',width:1440,height:1050},{name:'tablet',w
       await expect(page.locator('.error-notice')).toHaveCount(0);
       await page.waitForTimeout(500);
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
-      if(!path) await expect(page.locator('.circuit-history .recharts-line-curve')).toHaveCount(2);
+      if(!path) {await expect(page.locator('.circuit-history')).toHaveCount(0);await expect(page.locator('.widget-forecast-day')).toHaveCount(4);await expect(page.locator('.journal-preview > li')).toHaveCount(5);}
       if(path==='meteo') await expect(page.locator('.forecast-grid .forecast-temp')).toHaveCount(4);
+      if(path==='analyse'&&viewport.name==='mobile') {const bounds=await page.locator('.transition-values strong').first().boundingBox();expect(bounds.x+bounds.width).toBeLessThanOrEqual(viewport.width);}
       await page.screenshot({path:`../docs/screenshots/${viewport.name}-${name}.png`,fullPage:true});
     }
     expect(errors).toEqual([]);expect(apis).toEqual([]);
@@ -35,7 +36,7 @@ test('cockpit: drag, resize, library and persistence use isolated demo storage',
   const before=await boiler.boundingBox();
   await page.getByRole('button',{name:'Retirer Météo',exact:true}).click();
   await page.getByRole('button',{name:'Ajouter un module',exact:true}).click();
-  await page.getByRole('dialog').getByRole('button',{name:/Modulation/}).click();
+  await page.getByRole('dialog').getByRole('button',{name:/Températures/}).click();
   await page.getByRole('button',{name:'C’est parfait'}).click();
   const box=await boiler.locator('.widget-drag').boundingBox();
   await page.mouse.move(box.x+80,box.y+20);await page.mouse.down();
@@ -49,7 +50,7 @@ test('cockpit: drag, resize, library and persistence use isolated demo storage',
   await page.waitForTimeout(400);expect((await boiler.boundingBox()).height).toBeGreaterThan(old.height);
   const stored=JSON.parse(await page.evaluate(()=>localStorage.getItem('okoko.demo.cockpit.v1')));
   await page.getByRole('button',{name:'Terminer',exact:true}).click();
-  await page.reload();await expect(page.locator('[data-widget="modulation"]')).toHaveCount(1);
+  await page.reload();await expect(page.locator('[data-widget="temperatures"]')).toHaveCount(1);
   await expect(page.locator('[data-widget="weather"]')).toHaveCount(0);
   await page.waitForTimeout(250);
   const after=JSON.parse(await page.evaluate(()=>localStorage.getItem('okoko.demo.cockpit.v1')));
@@ -87,10 +88,15 @@ test('refills persist locally, reject duplicates and reset preserves production 
 });
 test('imports paginate, simulation updates journal and CSV export stays in browser',async({page})=>{
   const api=[];page.on('request',r=>{if(r.url().includes('/api/'))api.push(r.url());});
-  await page.goto('./#/system');await expect(page.locator('tbody tr')).toHaveCount(10);
+  await page.goto('./#/system');await expect(page.locator('tbody tr')).toHaveCount(5);
   await page.getByRole('button',{name:'Suivants',exact:true}).click();
   await page.getByRole('button',{name:'Suivants',exact:true}).click();
+  await page.getByRole('button',{name:'Suivants',exact:true}).click();
+  await page.getByRole('button',{name:'Suivants',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Suivants',exact:true})).toBeDisabled();
   await expect(page.locator('tbody tr')).toHaveCount(5);
+  await page.getByRole('button',{name:'Précédents',exact:true}).click();
+  await page.getByRole('button',{name:'Précédents',exact:true}).click();
   await page.getByRole('button',{name:'Précédents',exact:true}).click();
   await page.getByRole('button',{name:'Précédents',exact:true}).click();
   await page.getByRole('button',{name:'Simuler un import',exact:true}).click();
@@ -114,4 +120,33 @@ test('public sharing metadata and crawl files are available without running an A
   expect(await sitemap.text()).toContain('<loc>https://sfley.github.io/okoko-v3/</loc>');
   const preview=await request.get('preview.png');expect(preview.status()).toBe(200);
   expect((await preview.body()).subarray(0,8).toString('hex')).toBe('89504e470d0a1a0a');
+});
+
+test('installation journal: latest events on cockpit, all pages, filters, readable pumps and CSV on demand',async({page})=>{
+  await page.goto('./');
+  const widget=page.locator('[data-widget="activity"]');
+  await expect(widget.locator('li')).toHaveCount(5);
+  await expect(widget).toContainText('À l’arrêt');
+  await expect(widget).toContainText('En marche');
+  expect(await widget.locator('.journal-preview').evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
+  await widget.getByRole('link',{name:'Ouvrir le journal'}).click();
+  await expect(page.locator('tbody tr')).toHaveCount(10);
+  await page.getByRole('button',{name:'Suivants',exact:true}).click();
+  await expect(page.locator('tbody tr')).toHaveCount(8);
+  await page.getByLabel('Type d’événement',{exact:true}).selectOption('pump');
+  await expect(page.locator('tbody tr')).toHaveCount(5);
+  await expect(page.locator('tbody')).toContainText('En marche');
+  await expect(page.locator('tbody')).not.toContainText('Mode / état');
+  await expect(page.locator('.import-pagination')).toContainText('Page 1 / 1');
+  await page.getByLabel('Filtrer les transitions').selectOption('ww1');
+  await expect(page.locator('tbody tr')).toHaveCount(2);
+  await page.getByLabel('Type d’événement',{exact:true}).selectOption('all');
+  await page.getByLabel('Filtrer les transitions').selectOption('all');
+  await page.getByLabel('Rechercher un état').fill('Chauffage');
+  await page.getByRole('button',{name:'Rechercher dans le journal'}).click();
+  await expect(page.locator('tbody tr')).toHaveCount(5);
+  await expect(page.locator('tbody')).toContainText('Chaudière');
+  await expect(page.locator('.analysis-history')).not.toHaveAttribute('open','');
+  await page.locator('.analysis-history > summary').click();
+  await expect(page.getByRole('button',{name:'Extérieur',exact:true})).toBeVisible();
 });

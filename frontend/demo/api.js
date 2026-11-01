@@ -30,10 +30,22 @@ export async function demoRequest(path, options = {}) {
     const days = Math.min(730,Math.max(1,Number(url.searchParams.get('days'))||1));
     return copy(data.history.map((row,i)=>({...row,ts:new Date(Date.now()-(143-i)*600000*days).toISOString()})));
   }
-  if (name === 'system') {
-    const total=data.system.runs.length, pages=Math.max(1,Math.ceil(total/10));
+  if (name === 'transitions' && url.search) {
+    let events=data.transitions;
+    const circuit=url.searchParams.get('circuit'),kind=url.searchParams.get('kind'),days=Number(url.searchParams.get('days')),q=(url.searchParams.get('q')||'').toLocaleLowerCase();
+    if(circuit)events=events.filter(e=>e.circuit===circuit);
+    if(kind)events=events.filter(e=>kind==='pump'?e.kind==='pump':e.kind.startsWith('status'));
+    if(days>0)events=events.filter(e=>new Date(e.ts)>=Date.now()-days*86400000);
+    if(q)events=events.filter(e=>(e.before+' '+e.after).toLocaleLowerCase().includes(q));
+    const total=events.length,size=Math.min(100,Math.max(1,Number(url.searchParams.get('page_size'))||10)),pages=Math.max(1,Math.ceil(total/size));
     const page=Math.min(pages,Math.max(1,Number(url.searchParams.get('page'))||1));
-    return copy({...data.system,runs:data.system.runs.slice((page-1)*10,page*10),pagination:{page,page_size:10,total,pages}});
+    const pumps=events.filter(e=>e.kind==='pump').length;
+    return copy({events:events.slice((page-1)*size,page*size),pagination:{page,page_size:size,pages,total},summary:{events:total,pump_changes:pumps,status_changes:total-pumps}});
+  }
+  if (name === 'system') {
+    const total=data.system.runs.length, pages=Math.max(1,Math.ceil(total/5));
+    const page=Math.min(pages,Math.max(1,Number(url.searchParams.get('page'))||1));
+    return copy({...data.system,runs:data.system.runs.slice((page-1)*5,page*5),pagination:{page,page_size:5,total,pages}});
   }
   if (Object.hasOwn(data,name)) return copy(data[name]);
   throw new Error('Cette fonction nécessite votre installation locale.');

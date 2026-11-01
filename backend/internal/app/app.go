@@ -24,7 +24,7 @@ import (
 	"unicode/utf8"
 )
 
-const Version = "3.0.1"
+const Version = "3.0.2"
 
 type Config struct {
 	Timezone             string `json:"timezone"`

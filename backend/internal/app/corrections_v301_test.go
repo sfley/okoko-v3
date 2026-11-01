@@ -128,11 +128,11 @@ func TestImportPaginationKeepsAllOlderRuns(t *testing.T) {
 		a.logRun(fmt.Sprintf("CSV %02d", i), i, i, nil)
 	}
 	seen := map[float64]bool{}
-	for page, count := range []int{10, 10, 5} {
+	for page, count := range []int{5, 5, 5, 5, 5} {
 		out := getJSON(t, a, fmt.Sprintf("/api/v3/system?page=%d", page+1))
 		runs := out["runs"].([]any)
 		p := out["pagination"].(map[string]any)
-		if len(runs) != count || p["total"] != float64(25) || p["pages"] != float64(3) {
+		if len(runs) != count || p["total"] != float64(25) || p["pages"] != float64(5) {
 			t.Fatalf("pagination: %v", out)
 		}
 		for _, item := range runs {
@@ -154,7 +154,7 @@ func TestImportPaginationKeepsAllOlderRuns(t *testing.T) {
 		}
 	}
 	out := getJSON(t, a, "/api/v3/system?page=999")
-	if out["pagination"].(map[string]any)["page"] != float64(3) {
+	if out["pagination"].(map[string]any)["page"] != float64(5) {
 		t.Fatal("out of range page not clamped")
 	}
 }

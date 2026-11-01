@@ -55,9 +55,8 @@ for (const viewport of [
         for (const id of ["hk1", "hk2"]) {
           const widget = page.locator(`[data-widget="${id}"]`);
           const bounds = await widget.boundingBox();
-          const graph = await widget.locator('.circuit-history').boundingBox();
+          await expect(widget.locator('.circuit-history')).toHaveCount(0);
           const footer = await widget.locator('.circuit-footer').boundingBox();
-          expect(graph.height).toBeGreaterThan(25);
           expect(footer.y + footer.height).toBeLessThanOrEqual(bounds.y + bounds.height - 6);
         }
       }
@@ -100,10 +99,10 @@ test("cockpit: add, remove, resize, drag, reload persistence", async ({
     .click();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: /Modulation/ })
+    .getByRole("button", { name: /Températures/ })
     .click();
   await page.getByRole("button", { name: "C’est parfait" }).click();
-  await expect(page.locator('[data-widget="modulation"]')).toHaveCount(1);
+  await expect(page.locator('[data-widget="temperatures"]')).toHaveCount(1);
   const header = boiler.locator(".widget-drag");
   const box = await header.boundingBox();
   await page.mouse.move(box.x + 80, box.y + 20);
@@ -114,7 +113,7 @@ test("cockpit: add, remove, resize, drag, reload persistence", async ({
   const config = await page.evaluate(() =>
     localStorage.getItem("okoko30.cockpit.v1"),
   );
-  expect(config).toContain("modulation");
+  expect(config).toContain("temperatures");
   expect((await boiler.boundingBox()).y).not.toBe(before.y);
   const handle = boiler.locator(".react-resizable-handle");
   const hb = await handle.boundingBox();
@@ -130,7 +129,7 @@ test("cockpit: add, remove, resize, drag, reload persistence", async ({
   );
   await page.getByRole("button", { name: "Terminer", exact: true }).click();
   await page.reload();
-  await expect(page.locator('[data-widget="modulation"]')).toHaveCount(1);
+  await expect(page.locator('[data-widget="temperatures"]')).toHaveCount(1);
   await expect(page.locator('[data-widget="weather"]')).toHaveCount(0);
   await page.waitForTimeout(250);
   expect(
@@ -185,6 +184,7 @@ test("chart legend and range controls respond", async ({ page }) => {
   await mock(page);
   await page.goto("/");
   await navigate(page, "Analyse");
+  await page.locator(".analysis-history > summary").click();
   const legend = page.getByRole("button", { name: "Chambres", exact: true }).first();
   await legend.click();
   await expect(legend).toHaveAttribute("aria-pressed", "false");
@@ -238,58 +238,55 @@ test("real backend serves SPA and unavailable NAS without invented telemetry", a
   await expect(page.locator("main")).toContainText("NAS non configuré");
 });
 
-test('unified navigation and named circuits with shared mini histories', async ({ page }) => {
- const historyCalls = [];
- page.on('request', r => { if (r.url().includes('/api/v3/history')) historyCalls.push(r.url()); });
- await mock(page);
- await page.goto('/');
+test('comfort cards use live readings, no mini graphs or history requests; journal and four-day weather are visible', async ({page})=>{
+ const calls=[];page.on('request',r=>{if(r.url().includes('/api/v3/history'))calls.push(r.url());});
+ await mock(page);await page.goto('/');
  await expect(page.locator('aside nav a')).toHaveCount(6);
- await expect(page.locator('.home-selector, .nav-label')).toHaveCount(0);
- for (const [id, name] of [['hk1','Chambres'],['hk2','Plancher']]) {
-  const widget = page.locator(`[data-widget="${id}"]`);
-  await expect(widget.locator('h2')).toHaveText(name);
-  await expect(widget.getByRole('group', { name: `Historique 24 heures · ${name}` })).toBeVisible();
-  await expect(widget.locator('.recharts-line-curve')).toHaveCount(1);
-  const setpoint = await widget.locator('.setpoint').boundingBox();
-  const graph = await widget.locator('.circuit-history').boundingBox();
-  const pump = await widget.locator('.circuit-footer').boundingBox();
-  expect(graph.y).toBeGreaterThanOrEqual(setpoint.y + setpoint.height);
-  expect(graph.y + graph.height).toBeLessThanOrEqual(pump.y + 1);
+ await expect(page.locator('[data-widget="activity"]')).toContainText('Mode confort');
+ await expect(page.locator('.widget-forecast-day')).toHaveCount(4);
+ for(const [id,name] of [['hk1','Chambres'],['hk2','Plancher']]) {
+  const widget=page.locator(`[data-widget="${id}"]`);await expect(widget.locator('h2')).toHaveText(name);
+  await expect(widget.locator('.circuit-history')).toHaveCount(0);
+  await expect(widget).toContainText('Départ du circuit');
  }
- expect(historyCalls).toHaveLength(1);
- await expect(page.getByRole('button', {name:'Extérieur',exact:true})).toHaveAttribute('aria-pressed','true');
- await navigate(page,'Chauffage');
- await expect(page.locator('.circuit-sparkline .recharts-line-curve')).toHaveCount(2);
- expect(historyCalls).toHaveLength(2);
- await navigate(page,'Analyse');
- await expect(page.getByRole('button', {name:'Extérieur',exact:true})).toBeVisible();
+ await navigate(page,'Chauffage');await expect(page.locator('.circuit-history')).toHaveCount(0);
+ const ecs=page.locator('.three-columns > section').last();await expect(ecs).not.toContainText('Départ du circuit');
+ expect(calls).toHaveLength(0);
+ await navigate(page,'Analyse');await expect(page.locator('.analysis-history')).not.toHaveAttribute('open','');
+ await expect(page.getByRole('heading',{name:'Évolution du silo',exact:true})).toHaveCount(0);
+ expect(calls).toHaveLength(0);
+ await page.locator('.analysis-history > summary').click();
+ await expect(page.getByRole('button',{name:'Extérieur',exact:true})).toBeVisible();
+ expect(calls).toHaveLength(1);
 });
 
-test('imports: ten rows per page and all older records accessible', async ({ page }) => {
+test('imports: five rows per page and all older records accessible', async ({ page }) => {
  const data = fixtures();
  await mock(page,data);
  await page.route('**/api/v3/system?*', route => {
   const pageNo = Number(new URL(route.request().url()).searchParams.get('page') || 1);
   const all = Array.from({length:25},(_,i)=>({id:25-i,at:'2026-10-23T07:50:00Z',time_known:true,source:`CSV ${25-i}`,read:1,added:1,duplicates:0,error:''}));
-  return route.fulfill({json:{...data.system,timezone:'Europe/Paris',runs:all.slice((pageNo-1)*10,pageNo*10),pagination:{page:pageNo,page_size:10,pages:3,total:25}}});
+  return route.fulfill({json:{...data.system,timezone:'Europe/Paris',runs:all.slice((pageNo-1)*5,pageNo*5),pagination:{page:pageNo,page_size:5,pages:5,total:25}}});
  });
  await page.goto('/system');
- await expect(page.locator('tbody tr')).toHaveCount(10);
+ await expect(page.locator('tbody tr')).toHaveCount(5);
  await expect(page.locator('tbody tr').first()).toContainText('CSV 25');
  await expect(page.locator('tbody tr').first()).toContainText('09:50:00');
- await page.screenshot({path:'../test-results/screenshots/desktop-Imports-10-lignes.png',fullPage:true});
+ await page.screenshot({path:'../test-results/screenshots/desktop-Imports-5-lignes.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});
  await page.waitForTimeout(350);
- await page.screenshot({path:'../test-results/screenshots/mobile-Imports-10-lignes.png',fullPage:true});
+ await page.screenshot({path:'../test-results/screenshots/mobile-Imports-5-lignes.png',fullPage:true});
  await page.getByRole('button',{name:'Suivants',exact:true}).click();
- await expect(page.locator('tbody tr').first()).toContainText('CSV 15');
- await expect(page.locator('tbody tr')).toHaveCount(10);
+ await expect(page.locator('tbody tr').first()).toContainText('CSV 20');
+ await expect(page.locator('tbody tr')).toHaveCount(5);
  await page.getByRole('button',{name:'Suivants',exact:true}).click();
  await expect(page.locator('tbody tr')).toHaveCount(5);
+ await page.getByRole('button',{name:'Suivants',exact:true}).click();
+ await page.getByRole('button',{name:'Suivants',exact:true}).click();
  await expect(page.locator('tbody tr').last()).toContainText('CSV 1');
  await expect(page.getByRole('button',{name:'Suivants',exact:true})).toBeDisabled();
  await page.getByRole('button',{name:'Précédents',exact:true}).click();
- await expect(page.locator('tbody tr')).toHaveCount(10);
+ await expect(page.locator('tbody tr')).toHaveCount(5);
 });
 
 test('import clock follows Paris in summer and winter regardless of browser timezone', async ({ browser }) => {

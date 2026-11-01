@@ -6,8 +6,6 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -153,24 +151,6 @@ export function HistoryChart({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </div>
-  );
-}
-export function CircuitSparkline({ data = [], circuit, name }) {
-  const hasData = data.some((row) => typeof row[circuit] === "number");
-  return (
-    <div className="circuit-history" role="group" aria-label={`Historique 24 heures · ${name || circuit.toUpperCase()}`}>
-      <div className="circuit-history-label"><span>Température · 24 h</span><span>°C</span></div>
-      {hasData ? <div className="circuit-sparkline">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-          <LineChart data={data} margin={{ top: 4, right: 2, bottom: 3, left: 2 }}>
-            <XAxis dataKey="ts" hide />
-            <YAxis hide domain={["dataMin - 0.3", "dataMax + 0.3"]} />
-            <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#647684", strokeDasharray: "3 3" }} />
-            <Line type="monotone" dataKey={circuit} name={name || names[circuit]} stroke={colors[circuit]} strokeWidth={2} dot={false} activeDot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div> : <div className="circuit-history-empty">Historique CSV indisponible</div>}
     </div>
   );
 }

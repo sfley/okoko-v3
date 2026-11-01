@@ -2,10 +2,9 @@ import React from "react";
 import { ArrowUpRight, LockKeyhole, Waves, Wind } from "lucide-react";
 import { Badge, Card, KeyValue, Metric, PageHeading } from "../components/UI";
 import { BoilerWidget, CircuitWidget } from "../components/Widgets";
-import { useResource, value } from "../api";
+import { value } from "../api";
 export default function Heating({ snapshot }) {
   const b = snapshot?.boiler || {};
-  const history = useResource("history?days=1", 60000);
   return (
     <>
       <PageHeading
@@ -60,7 +59,7 @@ export default function Heating({ snapshot }) {
             eyebrow={id === "ww1" ? "ECS" : id.toUpperCase()}
             icon={icon}
           >
-            <CircuitWidget snapshot={snapshot} circuit={id} history={history.data || []} detailed />
+            <CircuitWidget snapshot={snapshot} circuit={id} detailed />
           </Card>
         ))}
       </div>

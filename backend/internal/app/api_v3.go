@@ -101,7 +101,7 @@ func (a *App) snapshotV3(w http.ResponseWriter, r *http.Request) {
 				set = fmt.Sprintf("%.1f °C", n)
 			}
 		}
-		circuits[c] = map[string]any{"name": text(m, c, "name"), "temperature": temperature(m, c, currentKey), "setpoint": set, "status": translateStatus(text(m, c, "L_statetext")), "pump": pumpValue(m, c, "L_pump"), "flow": temperature(m, c, "L_flowtemp_act"), "minimum": temperature(m, c, "temp_min_set"), "maximum": temperature(m, c, "temp_max_set")}
+		circuits[c] = map[string]any{"name": text(m, c, "name"), "temperature": temperature(m, c, currentKey), "setpoint": set, "status": translateStatus(text(m, c, "L_statetext")), "pump": pumpValue(m, c, "L_pump"), "flow": temperature(m, c, "L_flowtemp_act"), "flow_setpoint": temperature(m, c, "L_flowtemp_set"), "temperature_low": temperature(m, c, "L_offtemp_act"), "minimum": temperature(m, c, "temp_min_set"), "maximum": temperature(m, c, "temp_max_set")}
 	}
 	writeJSON(w, map[string]any{"version": Version, "timezone": a.timeZone(), "instance_label": os.Getenv("OKOKO_INSTANCE_LABEL"), "configured": a.cfg.BoilerURL != "", "connected": !at.IsZero() && problem == "" && time.Since(at) < 3*time.Minute, "last_seen": timestamp, "stale": !at.IsZero() && time.Since(at) >= 3*time.Minute, "poll_seconds": max(10, a.cfg.PollSeconds), "error": problem,
 		"boiler":   map[string]any{"temperature": temperature(m, "pe1", "L_temp_act"), "modulation": number(m, "pe1", "L_modulation"), "flame": temperature(m, "pe1", "L_frt_temp_act"), "airflow": number(m, "pe1", "L_currentairflow"), "pressure": scaledNumber(m, "pe1", "L_lowpressure", 0.1), "pump": number(m, "pe1", "L_uw_speed"), "runtime": number(m, "pe1", "L_runtime"), "starts": number(m, "pe1", "L_starts"), "average_runtime": number(m, "pe1", "L_avg_runtime"), "status": translateStatus(text(m, "pe1", "L_statetext"))},
@@ -191,24 +191,101 @@ func (a *App) pelletsV3(w http.ResponseWriter, r *http.Request) {
 func (a *App) transitionsV3(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
-	rows, e := a.db.QueryContext(ctx, `SELECT ts,circuit,kind,old_value,new_value FROM okoko17_transitions ORDER BY ts DESC LIMIT 100`)
-	if e != nil {
-		http.Error(w, "Transitions indisponibles", 503)
+	// The original array response remains available to older clients.
+	if len(r.URL.Query()) == 0 {
+		events, err := a.transitionRows(ctx, "", nil, 100, 0)
+		if err != nil {
+			http.Error(w, "Transitions indisponibles", 503)
+			return
+		}
+		writeJSON(w, events)
 		return
 	}
-	defer rows.Close()
-	out := []map[string]string{}
-	for rows.Next() {
-		var ts, c, k, old, next string
-		if rows.Scan(&ts, &c, &k, &old, &next) == nil {
-			out = append(out, map[string]string{"ts": ts, "circuit": c, "kind": k, "before": old, "after": next})
+	page, size := 1, 10
+	for key, dest := range map[string]*int{"page": &page, "page_size": &size} {
+		if raw := r.URL.Query().Get(key); raw != "" {
+			n, err := strconv.Atoi(raw)
+			if err != nil || n < 1 || n > 1000000 || (key == "page_size" && n > 100) {
+				http.Error(w, "Pagination invalide", 400)
+				return
+			}
+			*dest = n
 		}
 	}
-	if rows.Err() != nil {
-		http.Error(w, "Transitions incomplètes", 503)
+	clauses := []string{}
+	args := []any{}
+	if c := r.URL.Query().Get("circuit"); c != "" {
+		if c != "hk1" && c != "hk2" && c != "pe1" && c != "ww1" {
+			http.Error(w, "Circuit invalide", 400)
+			return
+		}
+		clauses = append(clauses, "circuit=?")
+		args = append(args, c)
+	}
+	if kind := r.URL.Query().Get("kind"); kind != "" {
+		switch kind {
+		case "pump":
+			clauses = append(clauses, "kind='pump'")
+		case "status":
+			clauses = append(clauses, "kind LIKE 'status%'")
+		default:
+			http.Error(w, "Événement invalide", 400)
+			return
+		}
+	}
+	if raw := r.URL.Query().Get("days"); raw != "" {
+		days, err := strconv.Atoi(raw)
+		if err != nil || days < 1 || days > 730 {
+			http.Error(w, "Période invalide", 400)
+			return
+		}
+		clauses = append(clauses, "julianday(ts)>=julianday(?)")
+		args = append(args, time.Now().Add(-time.Duration(days)*24*time.Hour).UTC().Format(time.RFC3339))
+	}
+	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
+		if len(q) > 240 {
+			http.Error(w, "Recherche trop longue", 400)
+			return
+		}
+		clauses = append(clauses, "instr(lower(old_value || ' ' || new_value),lower(?))>0")
+		args = append(args, q)
+	}
+	where := ""
+	if len(clauses) > 0 {
+		where = " WHERE " + strings.Join(clauses, " AND ")
+	}
+	var total, pumps int
+	if err := a.db.QueryRowContext(ctx, "SELECT COUNT(*),COALESCE(SUM(CASE WHEN kind='pump' THEN 1 ELSE 0 END),0) FROM okoko17_transitions"+where, args...).Scan(&total, &pumps); err != nil {
+		http.Error(w, "Journal indisponible", 503)
 		return
 	}
-	writeJSON(w, out)
+	pages := max(1, (total+size-1)/size)
+	page = min(page, pages)
+	events, err := a.transitionRows(ctx, where, args, size, (page-1)*size)
+	if err != nil {
+		http.Error(w, "Journal indisponible", 503)
+		return
+	}
+	writeJSON(w, map[string]any{"events": events, "pagination": map[string]int{"page": page, "page_size": size, "total": total, "pages": pages}, "summary": map[string]int{"events": total, "pump_changes": pumps, "status_changes": total - pumps}})
+}
+
+func (a *App) transitionRows(ctx context.Context, where string, args []any, size, offset int) ([]map[string]any, error) {
+	params := append(append([]any{}, args...), size, offset)
+	rows, err := a.db.QueryContext(ctx, "SELECT id,ts,circuit,kind,old_value,new_value FROM okoko17_transitions"+where+" ORDER BY julianday(ts) DESC,id DESC LIMIT ? OFFSET ?", params...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	events := []map[string]any{}
+	for rows.Next() {
+		var id int64
+		var ts, c, kind, before, after string
+		if err := rows.Scan(&id, &ts, &c, &kind, &before, &after); err != nil {
+			return nil, err
+		}
+		events = append(events, map[string]any{"id": id, "ts": ts, "circuit": c, "kind": kind, "before": before, "after": after})
+	}
+	return events, rows.Err()
 }
 func (a *App) systemV3(w http.ResponseWriter, r *http.Request) {
 	page := 1
@@ -220,7 +297,7 @@ func (a *App) systemV3(w http.ResponseWriter, r *http.Request) {
 		}
 		page = parsed
 	}
-	const pageSize = 10
+	const pageSize = 5
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	var count, files int64
