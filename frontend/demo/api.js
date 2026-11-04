@@ -1,4 +1,5 @@
 import { createDemoData } from './data.js';
+import { demoOperation } from './operation.js';
 export const DEMO_STORAGE = 'okoko.demo.refills.v1';
 const data = createDemoData();
 let extraRefills = [];
@@ -24,6 +25,7 @@ export async function demoRequest(path, options = {}) {
     }
     throw new Error('Cette commande n’est pas disponible en démonstration.');
   }
+  if (name === 'operation') return demoOperation(data.history,Math.min(30,Math.max(1,Number(url.searchParams.get('days'))||1)));
   if (name === 'snapshot') return copy({...data.snapshot,last_seen:new Date().toISOString()});
   if (name === 'pellets') return copy({...data.pellets,refills:[...extraRefills,...data.pellets.refills]});
   if (name === 'history') {

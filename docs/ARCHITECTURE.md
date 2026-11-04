@@ -15,6 +15,7 @@ Le code de collecte, le schéma SQLite, les imports CSV et journaux HTTP ainsi q
 | Méthode | Route | Fonction |
 |---|---|---|
 | GET | `/api/v3/snapshot` | Cache temps réel, fraîcheur, circuits et pellets ; aucun appel chaudière |
+| GET | `/api/v3/operation?days=1` | Frise des pompes, températures et modulation ; relevés JSON séparés et archives antérieures |
 | GET | `/api/v3/history?days=1` | Mesures historiques réelles, échantillonnage temporel borné, NULL préservés |
 | GET | `/api/v3/pellets` | Mois archivés/corrigés et liste de recharges existante |
 | GET | `/api/v3/weather` | Données météo effectivement reçues de la chaudière |
@@ -57,3 +58,13 @@ La compilation normale conserve les routes du serveur Go et élimine l’adaptat
 Le format de disposition passe à la version 2, sous les mêmes clés de stockage. Une sauvegarde locale `.before-3.0.2` protège la migration des anciens modules et de la disposition initiale. Les modules Modulation et Système sont retirés ; les autres personnalisations restent conservées. L’historique n’est demandé que si le module Températures est affiché ou si son volet est ouvert dans Analyse.
 
 Le journal paginé renvoie `events`, `pagination` et `summary`. Sans paramètre, l’API conserve l’ancien tableau limité à 100 pour les clients existants. Le tri utilise `julianday(ts)` et l’identifiant ; les dates RFC3339 à décalages différents restent dans l’ordre chronologique réel. Les filtres et compteurs s’appliquent avant pagination. Aucune observation n’est supprimée ou reconstituée.
+
+## Analyse du fonctionnement (3.0.3)
+
+Les relevés JSON déjà effectués alimentent `operation_samples`, sans nouvelle requête chaudière. Cette table ne contient ni stock, ni consommation, ni JSON brut. `measurements` conserve son rôle pour les calculs de pellets, les imports CSV et les anciens exports. Les données JSON du fonctionnement ne sont pas injectées dans ces calculs.
+
+`/api/v3/operation` accepte 1 à 30 jours. Les archives CSV précèdent le premier relevé JSON ; ensuite les observations JSON font foi et les interruptions restent visibles. Les segments de pompe sont construits avant l’échantillonnage des courbes. Les valeurs inconnues cassent les segments ; les intervalles supérieurs à trois cadences sont laissés vides. Le dernier état est prolongé seulement jusqu’au prochain relevé rapproché, jamais au-delà du dernier relevé disponible.
+
+La réponse est bornée à 6 000 points et 2 000 segments par pompe ; si une limite est dépassée, la série correspondante est signalée comme trop dense et demande une période plus courte. Le zoom 1 h/6 h est local aux données chargées ; le repère et les axes sont communs aux trois graphiques.
+
+Pour l’ECS, les champs `temperature_on`, `temperature_off`, `sensor_on` et `sensor_off` décrivent les rôles et sélections déclarés, sans position physique supposée. L’ancien alias `temperature_low` est conservé seulement pour compatibilité.

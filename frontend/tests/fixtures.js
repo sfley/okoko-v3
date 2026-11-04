@@ -1,3 +1,4 @@
+import { demoOperation } from "../demo/operation.js";
 // Synthetic data exclusively for browser tests. Never imported by application code.
 export function fixtures() {
   const now = new Date();
@@ -48,7 +49,8 @@ export function fixtures() {
     hk1: 20.2 + Math.sin(i / 16) * 0.6,
     hk2: 19 + Math.sin(i / 20) * 0.5,
     ww1: 48 + Math.sin(i / 10) * 5,
-    modulation: 32 + Math.sin(i / 13) * 18,
+    modulation: i%28<19 ? 32 + Math.sin(i / 13) * 18 : 0,
+    hk1_pump:i%72>20?1:0,hk2_pump:i%96>6&&i%96<55?1:0,ww1_pump:i%72>=9&&i%72<15?1:0,
     stock: 1500 - i * 0.2,
   }));
   const forecast = Array.from({ length: 4 }, (_, i) => {
@@ -81,6 +83,7 @@ export function fixtures() {
   return {
     snapshot,
     history,
+    operation:demoOperation(history),
     weather: {
       current: { Lever: "07:52", Coucher: "18:27", "Durée du jour": "10h35" },
       forecast,

@@ -24,7 +24,7 @@ import (
 	"unicode/utf8"
 )
 
-const Version = "3.0.2"
+const Version = "3.0.3"
 
 type Config struct {
 	Timezone             string `json:"timezone"`
@@ -108,6 +108,7 @@ func (a *App) schema() error {
 	_, e := a.db.Exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA synchronous=NORMAL;
 CREATE TABLE IF NOT EXISTS import_runs(id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, source TEXT NOT NULL, added INTEGER NOT NULL, error TEXT NOT NULL DEFAULT '', read_count INTEGER NOT NULL DEFAULT 0, duplicate_count INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS samples(ts TEXT PRIMARY KEY, ext REAL,hk1 REAL,hk2 REAL,ww1 REAL,modulation REAL,stock_kg REAL,stock_max REAL,raw_json TEXT);
+CREATE TABLE IF NOT EXISTS operation_samples(ts INTEGER PRIMARY KEY,hk1 REAL,hk2 REAL,ww1 REAL,outdoor REAL,modulation REAL,hk1_pump INTEGER,hk2_pump INTEGER,ww1_pump INTEGER,interval_seconds INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS measurements(
  ts TEXT PRIMARY KEY, date TEXT NOT NULL, time TEXT NOT NULL,
  ext REAL, ext_actual REAL, boiler REAL, boiler_set REAL,
@@ -290,7 +291,10 @@ func (a *App) collect(ctx context.Context) error {
 	a.liveErr = ""
 	a.mu.Unlock()
 	a.recordTransitions(m, at)
-	_ = b // temps réel volontairement non historisé : les CSV sont la source de vérité
+	if err := a.recordOperation(ctx, m, at); err != nil {
+		log.Print("Historique de fonctionnement non enregistré")
+	}
+	_ = b // No raw JSON or boiler credentials are stored in this history.
 	return nil
 }
 
@@ -307,6 +311,7 @@ func (a *App) RunCollector(ctx context.Context) {
 			if a.cfg.RetentionDays > 0 {
 				cut := time.Now().AddDate(0, 0, -a.cfg.RetentionDays).Format(time.RFC3339)
 				_, _ = a.db.Exec("DELETE FROM samples WHERE ts < ?", cut)
+				_, _ = a.db.Exec("DELETE FROM operation_samples WHERE ts < ?", time.Now().AddDate(0, 0, -a.cfg.RetentionDays).UnixMilli())
 			}
 		}
 	}

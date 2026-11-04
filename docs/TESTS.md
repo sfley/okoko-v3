@@ -1,33 +1,33 @@
-# Rapport de validation — OKOKO 3.0.2
+# Validation — OKOKO 3.0.3
 
-Contrôles exécutés le **1er novembre 2026**, dans le cloud Linux amd64, avec Go 1.27.3, Node.js 24, Playwright 1.56.1, Chromium et PowerShell 7.5.4.
+Contrôles exécutés le **4 novembre 2026**, dans l’environnement cloud Linux amd64, avec Go 1.27.3, Node.js 24, Chromium, Playwright 1.56.1 et PowerShell 7.5.4.
 
-| Contrôle réellement exécuté | Résultat et portée |
+| Contrôle exécuté | Résultat et portée |
 |---|---|
-| `go mod verify`, `go vet ./...` | Réussis |
-| `go test -json -count=1 ./...` | 23 tests réussis ; serveur de fixture navigateur facultatif exclu puis exécuté séparément |
-| `go test -race -count=1 ./...` | Réussi, aucune course détectée |
-| Conservation du moteur | Les 7 fonctions de référence (calculs pellets et CSV) sont identiques après normalisation Go ; empreintes dans `source-preservation.json` |
-| `npm test` | 11 tests réussis : météo, valeurs manquantes, dates, migration et sauvegarde des dispositions, conservation des personnalisations, libellés des pompes |
-| Build de démo et de production | Réussis, fichiers séparés ; données fictives absentes des bundles de production |
-| Playwright — démo statique sous `/okoko-v3/` | 9 scénarios réussis, aucun saut ; six pages à trois tailles, cockpit, navigation, recharges locales, imports, CSV, partage et journal filtrable |
-| Playwright — application Go | 13 scénarios réussis, aucun saut ; six pages aux trois tailles, cockpit, absence de valeurs inventées, consigne technique 8 °C, NAS facultatif, noms des circuits, absence de mini-courbes/requêtes inutiles, journal d’imports et heures été/hiver |
-| Serveurs Go pour navigateur | Instance réelle sans chaudière sur 127.0.0.1:8892, base temporaire ; serveur de test JSON sur 8889, parsing Go réel ; contrôle mobile supplémentaire du binaire final sur 8893 après amélioration de la présentation |
-| Journal d’installation côté Go | Accès paginé à 137 événements, filtres, recherche littérale, compteurs et compatibilité de la réponse historique ; tri correct à travers le passage à l’heure d’hiver |
-| Imports | 25 entrées parcourues sur 5 pages de 5, sans perte ni doublon |
-| ECS | Sonde basse absente conservée comme absente, valeur fournie correctement normalisée, aucun départ inventé |
+| Modules Go, `go vet`, tests et race detector | Réussis ; 29 tests Go, serveur de fixture facultatif exécuté séparément |
+| Conservation du moteur | Les 7 fonctions de référence pour les pellets et le CSV sont identiques après normalisation Go |
+| Tests Node | 13 réussis, dont les sélections ECS égales/distinctes, les dispositions et les formats météo |
+| Build démo et production | Réussis ; isolation des données fictives vérifiée |
+| Navigateur — démo statique sous `/okoko-v3/` | 10 scénarios réussis sans saut ; six pages aux trois tailles, cockpit, données locales, journal et graphiques liés |
+| Navigateur — application Go | 15 scénarios réussis sans saut ; dont le parsing Go du JSON fourni, la frise issue de SQLite, le zoom 1 h, le repère commun et les libellés ECS |
+| Serveur de fixture Go | Exécuté sur 8889, terminé avec PASS après les essais ; données synthétiques dans le binaire de test uniquement |
+| Frise | Commutations conservées indépendamment de l’échantillonnage des courbes ; interruptions et états inconnus non comblés, dernier état non prolongé après le dernier relevé |
+| Courbes | Pic bref de modulation conservé, 0 % préservé, valeurs manquantes et interruptions visibles |
+| Réponse sur 30 jours | Cas local de 43 200 relevés : réponse inférieure à 1 Mio, moins de 6 000 points, plus de 700 changements de pompe conservés ; aucune insertion dans la table de calcul des pellets |
+| ECS | Même sélection 0/0 : pas de seconde sonde ; sélection distincte : libellé neutre ; sélection absente : aucune position inventée |
 | Linux ARM64 | Application et outil d’import compilés sans CGO ; format ELF aarch64 statique contrôlé |
-| Lanceur Windows | 12 contrôles réussis sous PowerShell/Linux : syntaxe, déblocage, reprise, validation des résultats et arrêt sur erreur |
+| Lanceur Windows | 12 contrôles réussis sous PowerShell/Linux, sans essai de console Windows réelle |
+| Confidentialité | Recherche de l’URL et de l’identifiant privés d’origine sans les afficher ; exemple de configuration vide et fichiers privés exclus |
 
-Les captures de `docs/screenshots/` proviennent de la démo effectivement ouverte dans Chromium à 1440×1050, 1024×900 et 390×844. Les courbes de température de la page Analyse sont repliées par défaut et ont aussi été ouvertes pendant les scénarios.
+Les captures dans `docs/screenshots/` proviennent du navigateur à 1440×1050, 1024×900 et 390×844. Le dernier parcours de production utilisait un serveur normal sans chaudière sur 8895 et le serveur de test isolé sur 8889. Les tests d’interface généraux utilisent des réponses API simulées ; les deux scénarios marqués « real Go » utilisent le backend réel.
+
+Un problème de sélection des bandes très courtes a été identifié lors du premier essai avec Go. Les bandes respectent désormais leur largeur temporelle ; le zoom 1 h permet la sélection. La suite complète a ensuite réussi. Le test de repère commun vérifie aussi l’alignement horizontal des trois graphiques.
 
 ## Limites restantes
 
-- Aucun déploiement ni démarrage sur le routeur OpenWrt réel ; la compilation ARM64 ne constitue pas un essai matériel.
-- Aucun accès à la chaudière, au NAS ou à la base du propriétaire. Les CSV signalés comme constants à zéro n’ont pas été fournis pour diagnostic ; aucun mapping ni historique n’a été modifié pour deviner une valeur.
-- La console Windows 11 et ses stratégies de groupe n’ont pas été testées. Les contrôles du lanceur s’exécutent sous PowerShell/Linux.
-- Le sélecteur Windows pour un fichier `.disabled` ne peut pas être corrigé sans identifier le fichier ou l’entrée de démarrage concernés. Aucun fichier Windows n’a été supprimé ou exécuté.
-- La démo utilise uniquement des données fictives explicites. Son domaine public `github.io` est inaccessible depuis cet environnement ; les essais utilisent la même compilation statique servie localement sous le même sous-répertoire.
-- L’interface réelle reste destinée au réseau domestique de confiance, sans authentification intégrée. Dispositions propres au navigateur, sans synchronisation entre appareils.
-
-Les exécutions GitHub Actions et les archives publiées se vérifient séparément dans le dépôt. Une commande configurée dans le workflow n’est pas présentée ici comme exécutée avant son résultat.
+- Aucun essai sur la chaudière, le NAS ou le routeur OpenWrt du propriétaire. La compilation ARM64 ne prouve pas le fonctionnement matériel.
+- Le suivi JSON commence après l’installation de cette version. Son historique antérieur n’est pas reconstruit ; seules les archives existantes peuvent compléter le début de la période.
+- Les frises montrent les états déclarés entre relevés rapprochés, pas une mesure continue des débits ni des temps de marche exacts.
+- Aucun rendement calculé, faute de mesures d’énergie thermique produite et d’énergie consommée.
+- Aucun essai de la console Windows 11. Le diagnostic du fichier `.disabled` nécessite toujours son identification sur le poste.
+- Le domaine public `github.io` est bloqué depuis l’environnement ; la même compilation statique a été testée localement sous le même sous-répertoire. Les résultats GitHub Actions et les téléchargements se vérifient séparément.

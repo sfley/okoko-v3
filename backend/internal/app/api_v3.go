@@ -101,7 +101,8 @@ func (a *App) snapshotV3(w http.ResponseWriter, r *http.Request) {
 				set = fmt.Sprintf("%.1f °C", n)
 			}
 		}
-		circuits[c] = map[string]any{"name": text(m, c, "name"), "temperature": temperature(m, c, currentKey), "setpoint": set, "status": translateStatus(text(m, c, "L_statetext")), "pump": pumpValue(m, c, "L_pump"), "flow": temperature(m, c, "L_flowtemp_act"), "flow_setpoint": temperature(m, c, "L_flowtemp_set"), "temperature_low": temperature(m, c, "L_offtemp_act"), "minimum": temperature(m, c, "temp_min_set"), "maximum": temperature(m, c, "temp_max_set")}
+		// temperature_low is a deprecated 3.0.2 alias; it does not identify a physical lower sensor.
+		circuits[c] = map[string]any{"name": text(m, c, "name"), "temperature": temperature(m, c, currentKey), "setpoint": set, "status": translateStatus(text(m, c, "L_statetext")), "pump": pumpValue(m, c, "L_pump"), "flow": temperature(m, c, "L_flowtemp_act"), "flow_setpoint": temperature(m, c, "L_flowtemp_set"), "temperature_low": temperature(m, c, "L_offtemp_act"), "temperature_on": temperature(m, c, "L_ontemp_act"), "temperature_off": temperature(m, c, "L_offtemp_act"), "sensor_on": number(m, c, "sensor_on"), "sensor_off": number(m, c, "sensor_off"), "minimum": temperature(m, c, "temp_min_set"), "maximum": temperature(m, c, "temp_max_set")}
 	}
 	writeJSON(w, map[string]any{"version": Version, "timezone": a.timeZone(), "instance_label": os.Getenv("OKOKO_INSTANCE_LABEL"), "configured": a.cfg.BoilerURL != "", "connected": !at.IsZero() && problem == "" && time.Since(at) < 3*time.Minute, "last_seen": timestamp, "stale": !at.IsZero() && time.Since(at) >= 3*time.Minute, "poll_seconds": max(10, a.cfg.PollSeconds), "error": problem,
 		"boiler":   map[string]any{"temperature": temperature(m, "pe1", "L_temp_act"), "modulation": number(m, "pe1", "L_modulation"), "flame": temperature(m, "pe1", "L_frt_temp_act"), "airflow": number(m, "pe1", "L_currentairflow"), "pressure": scaledNumber(m, "pe1", "L_lowpressure", 0.1), "pump": number(m, "pe1", "L_uw_speed"), "runtime": number(m, "pe1", "L_runtime"), "starts": number(m, "pe1", "L_starts"), "average_runtime": number(m, "pe1", "L_avg_runtime"), "status": translateStatus(text(m, "pe1", "L_statetext"))},
@@ -436,6 +437,7 @@ func (a *App) Handler() http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("GET /api/v3/snapshot", a.snapshotV3)
 	m.HandleFunc("GET /api/v3/history", a.historyV3)
+	m.HandleFunc("GET /api/v3/operation", a.operationV3)
 	m.HandleFunc("GET /api/v3/pellets", a.pelletsV3)
 	m.HandleFunc("GET /api/v3/transitions", a.transitionsV3)
 	m.HandleFunc("GET /api/v3/system", a.systemV3)

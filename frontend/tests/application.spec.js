@@ -184,7 +184,6 @@ test("chart legend and range controls respond", async ({ page }) => {
   await mock(page);
   await page.goto("/");
   await navigate(page, "Analyse");
-  await page.locator(".analysis-history > summary").click();
   const legend = page.getByRole("button", { name: "Chambres", exact: true }).first();
   await legend.click();
   await expect(legend).toHaveAttribute("aria-pressed", "false");
@@ -252,12 +251,11 @@ test('comfort cards use live readings, no mini graphs or history requests; journ
  await navigate(page,'Chauffage');await expect(page.locator('.circuit-history')).toHaveCount(0);
  const ecs=page.locator('.three-columns > section').last();await expect(ecs).not.toContainText('Départ du circuit');
  expect(calls).toHaveLength(0);
- await navigate(page,'Analyse');await expect(page.locator('.analysis-history')).not.toHaveAttribute('open','');
+ await navigate(page,'Analyse');await expect(page.locator('.journal-summary')).toHaveCount(0);
  await expect(page.getByRole('heading',{name:'Évolution du silo',exact:true})).toHaveCount(0);
  expect(calls).toHaveLength(0);
- await page.locator('.analysis-history > summary').click();
  await expect(page.getByRole('button',{name:'Extérieur',exact:true})).toBeVisible();
- expect(calls).toHaveLength(1);
+ expect(calls).toHaveLength(0);
 });
 
 test('imports: five rows per page and all older records accessible', async ({ page }) => {
@@ -329,4 +327,35 @@ test('real Go parser: supplied raw JSON, French forecasts and named circuits', a
  await expect(monday).not.toContainText('Midi');
  await expect(monday).not.toContainText('Soir');
  await page.screenshot({path:'../test-results/screenshots/raw-json-Météo.png',fullPage:true});
+});
+
+test('DHW labels never invent upper/lower sensor positions or duplicate a shared sensor',async({page})=>{
+ const data=fixtures();data.snapshot.circuits.ww1={...data.snapshot.circuits.ww1,temperature:39.7,temperature_off:39.7,sensor_on:0,sensor_off:0};
+ await mock(page,data);await page.goto('/');
+ const widget=page.locator('[data-widget="ecs"]');
+ await expect(widget).toContainText('Température du ballon');
+ await expect(widget).not.toContainText('Autre mesure ECS');
+ await expect(widget).not.toContainText(/Sonde (haute|basse)/);
+ await navigate(page,'Chauffage');
+ const card=page.locator('.three-columns > section').last();
+ await expect(card).not.toContainText('Autre mesure ECS');
+ data.snapshot.circuits.ww1.sensor_off=1;
+ await page.reload();await expect(card).toContainText('Autre mesure ECS');
+ await expect(card).not.toContainText(/Sonde (haute|basse)/);
+});
+
+test('real Go operating history drives the pump timeline without fabricated periods',async({page,request})=>{
+ test.skip(process.env.OKOKO_RAW_FIXTURE!=='1','Requires isolated Go fixture server');
+ const base='http://127.0.0.1:8889';
+ const response=await request.get(`${base}/api/v3/operation?days=1`);const operation=await response.json();
+ expect(operation.sources.json).toBe(true);expect(operation.pumps.hk1.length).toBeGreaterThan(1);
+ expect(operation.points.some(row=>row.modulation===40)).toBe(true);
+ await page.goto(`${base}/analyse`);
+ await expect(page.locator('.pump-segment.running').first()).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Modulation de la chaudière',exact:true})).toBeVisible();
+ await expect(page.locator('.journal-summary')).toHaveCount(0);
+ await page.getByRole('button',{name:'1 h',exact:true}).click();
+ const segment=page.locator('.pump-segment.running').first();expect((await segment.boundingBox()).width).toBeGreaterThan(5);
+ await segment.click();
+ await expect(page.locator('.recharts-reference-line')).toHaveCount(2);
 });

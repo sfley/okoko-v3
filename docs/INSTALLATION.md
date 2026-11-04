@@ -67,3 +67,9 @@ La base actuelle reste conservée. Une restauration manuelle de base est une op�
 Le NAS reste facultatif. La collecte JSON et la navigation fonctionnent sans NAS. Les imports réseau sont traités en arrière-plan ; les requêtes de supervision ne font pas de `stat` ou de lecture de fichiers sur le NAS. Le statut « montage détecté » ne prétend pas vérifier la santé d’un serveur NFS distant. Un montage bloqué au niveau du système peut immobiliser le travailleur d’import : configurer les délais NFS côté OpenWrt. Les API d’historique ont des délais bornés et le cache temps réel reste accessible.
 
 La page Système télécharge un ZIP SQLite cohérent, y compris les modifications WAL, vérifié avant l’envoi. Cette sauvegarde contient vos données historiques et doit rester privée. Aucun fichier de configuration de chaudière n’est inclus. L’ancienne fonction de sauvegarde programmée était désactivée ; aucune sauvegarde automatique nouvelle n’est annoncée.
+
+## Historique de fonctionnement à partir de 3.0.3
+
+Après la mise à jour, les lectures JSON habituelles enregistrent aussi les températures, la modulation et les états de pompe dans une table SQLite séparée. Aucune nouvelle adresse de chaudière ni fréquence de collecte n’est nécessaire. La conservation suit `retention_days`. Les archives existantes peuvent compléter le début de la période ; un passé sans relevés n’est pas reconstruit.
+
+Le lanceur effectue sa sauvegarde avant le remplacement du programme. Le schéma ajoute la table sans supprimer ni remplacer les données existantes. Un retour au binaire précédent reste possible.

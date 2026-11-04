@@ -22,7 +22,7 @@ Vous pouvez déplacer les widgets et essayer une recharge : tout reste dans votr
 
 </div>
 
-**Version 3.0.2 :** cockpit simplifié, journal d’installation enrichi, météo sur quatre jours et imports par cinq lignes. [Détail des changements](docs/CHANGEMENTS-3.0.2.md).
+**Version 3.0.3 :** frise des pompes, températures et modulation synchronisées, zoom 1 h / 6 h et correction des libellés ECS. [Détail des changements](docs/CHANGEMENTS-3.0.3.md).
 
 ## Votre installation, en un regard
 
@@ -32,7 +32,7 @@ Un thème bleu nuit, des accents orange et turquoise, des icônes SVG et une typ
 |---|---|
 | **Tableau de bord** | Cockpit : ajouter, retirer, déplacer et redimensionner les modules. Disposition enregistrée automatiquement par navigateur. |
 | **Chauffage** | Chaudière, circuits HK1/HK2 nommés, eau chaude, consignes programmées, pompes et températures de départ disponibles. |
-| **Analyse** | Journal filtrable et paginé des changements observés ; historiques de température à la demande. |
+| **Analyse** | Frise des pompes, températures et modulation sur une même période, zoom et journal filtrable. |
 | **Pellets** | Stock, consommations, recharges et bilan mensuel/annuel dans un historique unique. |
 | **Météo** | Aujourd’hui et les trois jours suivants, à partir du JSON ÖkoFEN. Créneaux horaires uniquement lorsqu’ils sont fournis. |
 | **Système** | Collecte, SQLite, NAS facultatif, sauvegarde et journal JSON/CSV paginé par cinq lignes. |

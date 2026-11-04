@@ -86,7 +86,7 @@ export default function System({ snapshot }) {
         }
         description="Un état clair de votre installation. Des données qui restent chez vous."
       >
-        <Badge>OKOKO {snapshot?.version || "3.0.2"}</Badge>
+        <Badge>OKOKO {snapshot?.version || "3.0.3"}</Badge>
       </PageHeading>
       <ErrorNotice error={resource.error} retry={resource.reload} />
       <ErrorNotice error={error} />
@@ -256,7 +256,7 @@ export default function System({ snapshot }) {
           <Server size={15} /> Go + SQLite · Frontend embarqué · Sans Node.js
           sur le routeur
         </span>
-        <span>OKOKO {snapshot?.version || "3.0.2"}</span>
+        <span>OKOKO {snapshot?.version || "3.0.3"}</span>
       </div>
     </>
   );

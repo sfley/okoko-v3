@@ -13,7 +13,7 @@ Livraison du 1er novembre 2026, à partir des retours d’utilisation de la vers
 
 ## Chauffage
 
-Suppression des mini-courbes et de la requête d’historique de cette page. Les départs HK1/HK2 et leur consigne sont affichés si fournis. L’ECS montre les sondes haute/basse du ballon lorsqu’elles existent. Une température de départ ECS absente du JSON n’est pas inventée ; la ligne vide disparaît. Le JSON fourni à l’origine expose `L_ontemp_act` et `L_offtemp_act`, pas un départ ECS.
+Suppression des mini-courbes et de la requête d’historique de cette page. Les départs HK1/HK2 et leur consigne sont affichés si fournis. La 3.0.2 avait étiqueté les mesures ECS « sondes haute/basse » : cette déduction était incorrecte et a été corrigée en 3.0.3. Une température de départ ECS absente du JSON n’est pas inventée ; la ligne vide disparaît. Le JSON fourni à l’origine expose `L_ontemp_act` et `L_offtemp_act`, pas un départ ECS.
 
 ## Analyse
 

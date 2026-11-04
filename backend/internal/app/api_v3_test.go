@@ -55,6 +55,7 @@ func TestSnapshotIsCachedAndDoesNotContactBoiler(t *testing.T) {
 	for i := 0; i < 8; i++ {
 		out := getJSON(t, a, "/api/v3/snapshot")
 		getJSON(t, a, "/api/v3/weather")
+		getJSON(t, a, "/api/v3/operation?days=1")
 		if out["boiler"].(map[string]any)["temperature"] != 64.2 {
 			t.Fatalf("scaled temperature: %v", out)
 		}

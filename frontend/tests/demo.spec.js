@@ -146,7 +146,28 @@ test('installation journal: latest events on cockpit, all pages, filters, readab
   await page.getByRole('button',{name:'Rechercher dans le journal'}).click();
   await expect(page.locator('tbody tr')).toHaveCount(5);
   await expect(page.locator('tbody')).toContainText('Chaudière');
-  await expect(page.locator('.analysis-history')).not.toHaveAttribute('open','');
-  await page.locator('.analysis-history > summary').click();
   await expect(page.getByRole('button',{name:'Extérieur',exact:true})).toBeVisible();
+});
+
+test('Analyse shows pump states, temperatures and modulation together, with a shared inspection marker',async({page})=>{
+ await page.goto('./#/analyse');
+ await expect(page.locator('.journal-summary')).toHaveCount(0);
+ await expect(page.locator('.pump-lane')).toHaveCount(3);
+ await expect(page.locator('.pump-timeline-legend')).toContainText('Sans relevé');
+ await expect(page.getByRole('heading',{name:'Modulation de la chaudière',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Extérieur',exact:true})).toBeVisible();
+ const segment=page.locator('.pump-segment.running').first();await segment.click();
+ await expect(page.getByRole('button',{name:'Effacer le repère'})).toBeVisible();
+ await expect(page.locator('.pump-cursor')).toHaveCount(3);
+ await expect(page.locator('.recharts-reference-line')).toHaveCount(2);
+ const marker=await page.locator('.pump-cursor').first().boundingBox();
+ for(const reference of await page.locator('.recharts-reference-line line').all()) {const bounds=await reference.boundingBox();expect(Math.abs(bounds.x-marker.x)).toBeLessThan(2);}
+ await page.getByRole('button',{name:'Effacer le repère'}).click();
+ await expect(page.locator('.pump-cursor')).toHaveCount(0);
+ await page.getByRole('button',{name:'1 h',exact:true}).click();
+ await expect(page.getByRole('button',{name:'1 h',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('button',{name:'7 jours',exact:true}).click();
+ await expect(page.getByRole('button',{name:'7 jours',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.locator('.efficiency-note > summary').click();
+ await expect(page.locator('.efficiency-note')).toContainText('aucun rendement n’est calculé');
 });

@@ -25,6 +25,7 @@ import {
   WeatherIcon,
 } from "./UI";
 import { pageHref } from "../mode";
+import { otherDHWReading } from "../dhw";
 import { circuitLabels, eventLabel, eventValue, journalData } from "../journal";
 import { ErrorNotice } from "./UI";
 import { dateLabel, value } from "../api";
@@ -62,10 +63,11 @@ export function BoilerWidget({ snapshot: s }) {
 }
 export function CircuitWidget({ snapshot, circuit, detailed = false }) {
   const c = snapshot?.circuits?.[circuit] || {};
+  const other = circuit === "ww1" ? otherDHWReading(c) : null;
   return (
     <div className="circuit-widget">
       <div className="circuit-reading">
-        <div><span className="circuit-measure-label">{circuit === "ww1" ? "Sonde haute du ballon" : "Température ambiante"}</span><div className="big-reading">
+        <div><span className="circuit-measure-label">{circuit === "ww1" ? "Température du ballon" : "Température ambiante"}</span><div className="big-reading">
           {value(c.temperature)}
           <small>°C</small>
         </div></div>
@@ -80,7 +82,7 @@ export function CircuitWidget({ snapshot, circuit, detailed = false }) {
         <strong>{c.setpoint || "—"}</strong>
       </div>
       {typeof c.flow === 'number' && <div className="circuit-flow"><span>Départ du circuit</span><strong>{value(c.flow)} °C</strong></div>}
-      {circuit === "ww1" && typeof c.temperature_low === 'number' && !detailed && <div className="circuit-flow"><span>Sonde basse du ballon</span><strong>{value(c.temperature_low)} °C</strong></div>}
+      {other !== null && !detailed && <div className="circuit-flow"><span>Autre mesure ECS</span><strong>{value(other)} °C</strong></div>}
       <div className="circuit-footer">
         <Pump on={c.pump} />
         <span>{c.status?.split("|")[0] || "Mode inconnu"}</span>
@@ -90,7 +92,7 @@ export function CircuitWidget({ snapshot, circuit, detailed = false }) {
           {c.status?.includes("|") && <StatusText text={c.status.split("|").slice(1).join("|")} />}
           {typeof c.flow_setpoint === 'number' && <KeyValue label="Départ demandé">{value(c.flow_setpoint)} °C</KeyValue>}
           {circuit === "ww1" && <>
-            {typeof c.temperature_low === 'number' && <KeyValue label="Sonde basse du ballon">{value(c.temperature_low)} °C</KeyValue>}
+            {other !== null && <KeyValue label="Autre mesure ECS">{value(other)} °C</KeyValue>}
             {typeof c.maximum === 'number' && <KeyValue label="Maximum programmé">{value(c.maximum)} °C</KeyValue>}
             {typeof c.flow !== "number" && <p className="small-note">Le JSON de cette installation ne fournit pas de température de départ ECS.</p>}
           </>}
