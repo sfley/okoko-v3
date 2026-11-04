@@ -72,3 +72,10 @@ Deux colonnes REAL nullables, `hk1_flow` et `hk2_flow`, sont ajoutées à `opera
 Dans chaque graphique de pompe, une courbe fine représente la température réelle ; un masque SVG colore l’aire uniquement sur les segments déclarés en marche. La bande inférieure distingue marche, arrêt et absence de relevé même si la température manque. L’ECS utilise la température du ballon (`L_ontemp_act`), les HK utilisent `L_flowtemp_act`. La hauteur n’est ni un débit ni une puissance calorifique.
 
 Pour l’ECS, les champs `temperature_on`, `temperature_off`, `sensor_on` et `sensor_off` décrivent les rôles et sélections déclarés, sans position physique supposée. L’ancien alias `temperature_low` est conservé seulement pour compatibilité.
+
+
+### Ambiances dans les graphiques de pompe (3.0.5)
+
+Les graphiques HK1/HK2 superposent `hk1`/`hk2` (ambiances déjà historisées par l’API de fonctionnement) à `hk1_flow`/`hk2_flow` (eau du circuit). La courbe d’ambiance reste tracée pendant les arrêts de pompe et n’est pas limitée par le masque de marche. Les deux températures partagent l’axe en °C et l’axe temporel existants. Les valeurs absentes cassent le tracé ; la valeur instantanée du snapshot ne complète pas l’historique. La légende peut masquer la pièce seule. Le tooltip affiche les deux mesures à la même observation.
+
+Le graphique ECS garde uniquement le ballon, conformément à l’absence de mesure ambiante ECS dans le JSON fourni. Aucun changement de schéma, de collecte ou de calcul de pellets n’est nécessaire en 3.0.5.

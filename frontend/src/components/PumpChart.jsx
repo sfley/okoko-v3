@@ -1,5 +1,5 @@
-import React, { useId } from 'react';
-import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, usePlotArea } from 'recharts';
+import React, { useId, useState } from 'react';
+import { Area, AreaChart, Line, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, usePlotArea } from 'recharts';
 import { dateLabel, value } from '../api';
 import { timeAxisProps, useChartWidth, TimeCursor } from './TimeAxis';
 
@@ -32,30 +32,35 @@ function PumpMask({id,spans,domain,color,onSelect}) {
   </g>;
 }
 
-function PumpTooltip({active,payload,label,spans,field}) {
+function PumpTooltip({active,payload,label,spans,field,waterLabel,roomField,roomName,roomVisible}) {
   if(!active||!payload?.length||!Number.isFinite(label))return null;
   const span=spans.findLast(span=>Date.parse(span.start)<=label&&Date.parse(span.end)>=label);
-  const temperature=payload[0]?.payload?.[field];
-  return <div className="chart-tooltip"><strong>{stamp(label)}</strong><div><span>{span?(span.state===1?'Pompe en marche':'Pompe à l’arrêt'):'État de pompe inconnu'}</span></div><div><span>Température mesurée</span><b>{typeof temperature==='number'?`${value(temperature)} °C`:'Indisponible'}</b></div></div>;
+  const reading=payload[0]?.payload;
+  const temperature=key=>typeof reading?.[key]==='number'?`${value(reading[key])} °C`:'Indisponible';
+  return <div className="chart-tooltip pump-chart-tooltip"><strong>{stamp(label)}</strong><div><span>{span?(span.state===1?'Pompe en marche':'Pompe à l’arrêt'):'État de pompe inconnu'}</span></div><div><i style={{background:'#728b9c'}}/><span>{waterLabel}</span><b>{temperature(field)}</b></div>{roomField&&roomVisible&&<div><i style={{background:'#f0d4a0'}}/><span>Pièce · {roomName}</span><b>{temperature(roomField)}</b></div>}</div>;
 }
 
-export default function PumpChart({data=[],spans=[],field,domain,color,cursor,onSelect}) {
+export default function PumpChart({data=[],spans=[],field,domain,color,cursor,onSelect,waterLabel='Eau du circuit',roomField,roomName}) {
   const id=`pump-${useId().replaceAll(':','')}`,[ref,width]=useChartWidth();
+  const [roomHidden,setRoomHidden]=useState(false);
   const rows=data.map(row=>({...row,_time:Date.parse(row.ts)}));
   const hasTemperature=rows.some(row=>typeof row[field]==='number');
+  const hasRoom=Boolean(roomField)&&rows.some(row=>typeof row[roomField]==='number');
   return <>
-    <div className="pump-chart-legend"><span><i style={{background:color}}/>Pompe en marche · température</span><span><i className="stopped"/>À l’arrêt</span><span><i className="unknown"/>Sans relevé</span><b>°C</b></div>
-    {!hasTemperature&&<p className="pump-missing-temperature">Température non disponible sur cette période. Seul l’état de la pompe est représenté.</p>}
+    <div className="pump-chart-legend"><span><i style={{background:color}}/>{waterLabel} · pompe en marche</span>{roomField&&<button className="room-legend" aria-pressed={!roomHidden} disabled={!hasRoom} onClick={()=>setRoomHidden(hidden=>!hidden)}><i/>Pièce · {roomName}</button>}<span><i className="stopped"/>Pompe à l’arrêt</span><span><i className="unknown"/>Sans relevé</span><b>°C</b></div>
+    {!hasTemperature&&<p className="pump-missing-temperature">{waterLabel} : température indisponible sur cette période.{hasRoom?' L’ambiance et l’état de la pompe restent visibles.':' Seul l’état de la pompe est représenté.'}</p>}
+    {roomField&&!hasRoom&&<p className="pump-missing-room">Température de la pièce indisponible sur cette période.</p>}
     <div className="pump-chart-canvas chart-canvas" ref={ref}>
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <AreaChart data={rows} margin={{left:0,right:24,top:12,bottom:0}} onClick={event=>{if(typeof event?.activeLabel==='number')onSelect?.(event.activeLabel);}}>
           <defs><linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity={0.55}/><stop offset="100%" stopColor={color} stopOpacity={0.10}/></linearGradient></defs>
           <CartesianGrid stroke="#24313d" strokeDasharray="3 5" vertical={false}/>
           <XAxis {...timeAxisProps(domain,width)}/>
-          <YAxis width={42} domain={[0,max=>Math.max(60,Math.ceil(max/10)*10)]} axisLine={false} tickLine={false} tick={hasTemperature?{fill:'#9db0bf',fontSize:11}:false}/>
-          <Tooltip content={<PumpTooltip spans={spans} field={field}/>} cursor={{stroke:'#647684',strokeDasharray:'3 3'}}/>
+          <YAxis width={42} domain={[0,max=>Math.max(60,Math.ceil(max/10)*10)]} axisLine={false} tickLine={false} tick={hasTemperature||(hasRoom&&!roomHidden)?{fill:'#9db0bf',fontSize:11}:false}/>
+          <Tooltip filterNull={false} content={<PumpTooltip spans={spans} field={field} waterLabel={waterLabel} roomField={roomField} roomName={roomName} roomVisible={!roomHidden}/>} cursor={{stroke:'#647684',strokeDasharray:'3 3'}}/>
           {hasTemperature&&<Area dataKey={field} type="linear" name="Température mesurée" fill="none" stroke="#728b9c" strokeWidth={1.5} connectNulls={false} isAnimationActive={false} activeDot={false}/>}
           {hasTemperature&&<Area className="pump-thermal-area" dataKey={field} type="linear" name="Pompe en marche" fill={`url(#${id}-fill)`} stroke={color} strokeWidth={2.5} clipPath={`url(#${id})`} connectNulls={false} isAnimationActive={false} activeDot={false} tooltipType="none"/>}
+          {hasRoom&&<Line className="pump-room-line" dataKey={roomField} name={`Pièce · ${roomName}`} type="linear" stroke="#f0d4a0" strokeWidth={2} strokeDasharray="5 4" dot={false} activeDot={{r:4,fill:'#f0d4a0',stroke:'#142430'}} hide={roomHidden} connectNulls={false} isAnimationActive={false}/>}
           <PumpMask id={id} spans={spans} domain={domain} color={color} onSelect={onSelect}/>
           {cursor!==null&&<ReferenceLine x={cursor} stroke="#abc7ce" strokeDasharray="4 4" label={<TimeCursor at={cursor}/>}/>}
         </AreaChart>

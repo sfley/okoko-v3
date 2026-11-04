@@ -3292,14 +3292,19 @@ th {
 .modulation-card .history-chart {height:245px;}
 .pump-chart-canvas {height:205px;margin-top:12px;}
 .pump-chart-legend {display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;margin-top:12px;}
-.pump-chart-legend > span {display:flex;align-items:center;gap:7px;font-size:11px;color:#a4bac5;}
+.pump-chart-legend > span,.pump-chart-legend > button {display:flex;align-items:center;gap:7px;font-size:11px;color:#a4bac5;}
+.pump-chart-legend > button {padding:0;background:none;}
+.pump-chart-legend .room-legend {color:#e4d5b9;}
+.pump-chart-legend .room-legend i {height:0;border-top:2px dashed #f0d4a0;border-radius:0;}
+.pump-chart-legend .room-legend[aria-pressed="false"] {opacity:.45;text-decoration:line-through;}
+.pump-chart-legend .room-legend:disabled {opacity:.45;cursor:default;}
 .pump-chart-legend i {display:block;width:16px;height:7px;border-radius:2px;}
 .pump-chart-legend .stopped {background:#4a6073;}
 .pump-chart-legend .unknown {background:repeating-linear-gradient(135deg,#697e8e44 0 3px,#172631 3px 6px);}
 .pump-chart-legend b {margin-left:auto;font-size:11px;font-weight:400;color:#8ea5b3;}
 .pump-segment {cursor:crosshair;}
 .pump-segment:hover,.pump-segment:focus-visible {filter:brightness(1.4);stroke:#d4ebe5;stroke-width:2;outline:none;}
-.pump-missing-temperature {font-size:11px;line-height:1.7;color:#b6a583;margin-top:14px;}
+.pump-missing-temperature,.pump-missing-room {font-size:11px;line-height:1.7;color:#b6a583;margin-top:14px;}
 .operation-reading-note {margin:16px 0 26px;}
 .efficiency-note {margin-top:15px;font-size:11px;color:#8ea6b4;line-height:1.7;}
 .efficiency-note summary {cursor:pointer;color:#b3c9cf;}
@@ -3308,6 +3313,6 @@ th {
  .analysis-zoom {justify-content:flex-start;margin-top:0;}
  .analysis-inspection {flex-wrap:wrap;line-height:1.7;}
  .pump-chart-legend {gap:10px 14px;}
- .pump-chart-legend > span {font-size:10px;}
+ .pump-chart-legend > span,.pump-chart-legend > button {font-size:10px;}
  .pump-chart-canvas {height:195px;}
 }

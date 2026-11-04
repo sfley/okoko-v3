@@ -159,6 +159,8 @@ test('Analyse: ordered thermal pump charts, direct scales and five aligned inspe
  await expect(page.locator('.thermal-pump-card').first()).toContainText('température du ballon');
  await expect(page.locator('.thermal-pump-card').nth(1)).toContainText('température de départ');
  await expect(page.locator('.pump-thermal-area .recharts-area-area')).toHaveCount(3);
+ await expect(page.locator('.pump-room-line .recharts-line-curve')).toHaveCount(2);
+ await expect(page.locator('.thermal-pump-card').first().locator('.room-legend')).toHaveCount(0);
  const paths=await page.locator('.pump-thermal-area .recharts-area-area').evaluateAll(nodes=>nodes.map(node=>({path:node.getAttribute('d'),clip:node.getAttribute('clip-path')})));
  expect(paths.every(item=>item.path?.length>100&&item.clip?.startsWith('url(#pump-'))).toBe(true);
  await expect(page.getByRole('button',{name:'Extérieur',exact:true})).toBeVisible();
@@ -200,6 +202,10 @@ test('touch mobile: zoom, directly readable times, thermal pump selection and cl
   await expect(pump.locator('.pump-segment.running').first()).toBeVisible();
   await pump.locator('.pump-segment.running').first().tap();
   await expect(page.locator('.time-cursor-label')).toHaveCount(5);
+  const roomLegend=pump.getByRole('button',{name:'Pièce · Chambres',exact:true});
+  await roomLegend.tap();await expect(roomLegend).toHaveAttribute('aria-pressed','false');
+  await expect(pump.locator('.pump-room-line')).toHaveCount(0);
+  await roomLegend.tap();await expect(pump.locator('.pump-room-line .recharts-line-curve')).toHaveCount(1);
   const labels=await pump.locator('.time-axis-tick').allTextContents();
   expect(labels.length).toBeGreaterThanOrEqual(3);
   expect(labels.every(label=>/^\d{2}:\d{2}$/.test(label))).toBe(true);

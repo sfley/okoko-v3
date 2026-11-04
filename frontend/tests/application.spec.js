@@ -361,6 +361,15 @@ test('real Go operating history drives the pump timeline without fabricated peri
  const segment=page.locator('.pump-segment.running').first();expect((await segment.boundingBox()).width).toBeGreaterThan(5);
  await segment.click();
  await expect(page.locator('.recharts-reference-line')).toHaveCount(5);
+ const room=page.locator('.thermal-pump-card').nth(1);
+ await expect(room.locator('.pump-room-line .recharts-line-curve')).toHaveCount(1);
+ await room.locator('.pump-chart-canvas').scrollIntoViewIfNeeded();
+ const curve=await room.locator('.pump-room-line .recharts-line-curve').boundingBox();
+ await page.mouse.move(curve.x+curve.width/2,curve.y);
+ await expect(room.locator('.pump-chart-tooltip')).toContainText('Pièce · Chambres');
+ await expect(room.locator('.pump-chart-tooltip')).toContainText('19,6 °C');
+ await expect(room.locator('.pump-chart-tooltip')).toContainText('Eau du circuit');
+ await expect(page.locator('.thermal-pump-card').first().locator('.room-legend')).toHaveCount(0);
 });
 
 
@@ -372,5 +381,31 @@ test('missing flow history keeps real pump states without substituting room temp
  await expect(page.locator('.pump-missing-temperature')).toHaveCount(2);
  await expect(page.locator('.thermal-pump-card').nth(1).locator('.pump-segment.running').first()).toBeVisible();
  await expect(page.locator('.thermal-pump-card').nth(1).locator('.recharts-area-area')).toHaveCount(0);
+ await expect(page.locator('.thermal-pump-card').nth(1).locator('.pump-room-line .recharts-line-curve')).toHaveCount(1);
+ await expect(page.locator('.thermal-pump-card').nth(1).locator('.pump-missing-temperature')).toContainText('L’ambiance et l’état de la pompe restent visibles');
  await expect(page.locator('.thermal-pump-card').first().locator('.pump-missing-temperature')).toHaveCount(0);
+});
+
+test('room curves use only historical readings, break at missing data and toggle independently',async({page})=>{
+ const data=fixtures();
+ // Keep water readings, but remove one room reading inside a continuous period.
+ data.operation.points[10].hk1=null;
+ await mock(page,data);await page.goto('/analyse');
+ const room=page.locator('.thermal-pump-card').nth(1);
+ const path=room.locator('.pump-room-line .recharts-line-curve');
+ await expect(path).toHaveCount(1);
+ expect((await path.getAttribute('d')).split('M').length).toBeGreaterThanOrEqual(3);
+ await expect(path).toHaveAttribute('stroke-dasharray','5 4');
+ const toggle=room.getByRole('button',{name:'Pièce · Chambres',exact:true});
+ await toggle.click();await expect(toggle).toHaveAttribute('aria-pressed','false');
+ await expect(path).toHaveCount(0);
+ await expect(room.locator('.pump-thermal-area .recharts-area-area')).toHaveCount(1);
+ await toggle.click();await expect(path).toHaveCount(1);
+ // A live snapshot must never be copied backward into an empty room history.
+ for(const point of data.operation.points){point.hk1=null;point.hk2=null;}
+ await page.reload();
+ await expect(page.locator('.pump-missing-room')).toHaveCount(2);
+ await expect(page.locator('.pump-room-line')).toHaveCount(0);
+ await expect(room.getByRole('button',{name:'Pièce · Chambres',exact:true})).toBeDisabled();
+ await expect(page.locator('.pump-thermal-area .recharts-area-area')).toHaveCount(3);
 });

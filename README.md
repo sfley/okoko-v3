@@ -22,7 +22,7 @@ Vous pouvez déplacer les widgets et essayer une recharge : tout reste dans votr
 
 </div>
 
-**Version 3.0.4 :** températures en premier, un graphique thermique par pompe (ECS, Chambres, Plancher), puis modulation et journal. Graduations adaptées au zoom et repères datés sur chaque tracé. [Détail des changements](docs/CHANGEMENTS-3.0.4.md).
+**Version 3.0.5 :** les graphiques Chambres et Plancher superposent désormais l’eau du circuit et la température réelle de la pièce. Les ambiances sont en pointillés et masquables ; l’ECS conserve le ballon seul. [Détail des changements](docs/CHANGEMENTS-3.0.5.md).
 
 ## Votre installation, en un regard
 
