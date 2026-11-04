@@ -6,7 +6,7 @@ export function demoOperation(history,days=1,now=Date.now()) {
   const chart=[];
   for(const point of points) {
     const at=Date.parse(point.ts),gap=previous&&at-Date.parse(previous.ts)>3*step;
-    if(gap)chart.push({ts:new Date(Date.parse(previous.ts)+1).toISOString(),hk1:null,hk2:null,ww1:null,outdoor:null,modulation:null});
+    if(gap)chart.push({ts:new Date(Date.parse(previous.ts)+1).toISOString(),hk1:null,hk2:null,ww1:null,outdoor:null,modulation:null,hk1_flow:null,hk2_flow:null});
     chart.push(point);
     for(const id of Object.keys(pumps)) {
       const state=point[id+'_pump'];if(state!==0&&state!==1)continue;

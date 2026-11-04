@@ -149,25 +149,68 @@ test('installation journal: latest events on cockpit, all pages, filters, readab
   await expect(page.getByRole('button',{name:'Extérieur',exact:true})).toBeVisible();
 });
 
-test('Analyse shows pump states, temperatures and modulation together, with a shared inspection marker',async({page})=>{
+test('Analyse: ordered thermal pump charts, direct scales and five aligned inspection markers',async({page})=>{
  await page.goto('./#/analyse');
  await expect(page.locator('.journal-summary')).toHaveCount(0);
- await expect(page.locator('.pump-lane')).toHaveCount(3);
- await expect(page.locator('.pump-timeline-legend')).toContainText('Sans relevé');
- await expect(page.getByRole('heading',{name:'Modulation de la chaudière',exact:true})).toBeVisible();
+ await expect(page.locator('.thermal-pump-card')).toHaveCount(3);
+ const titles=await page.locator('.analysis-charts .panel-heading h2').allTextContents();
+ expect(titles).toEqual(['L’équilibre thermique','Pompe · ECS','Pompe · Chambres','Pompe · Plancher','Modulation de la chaudière']);
+ await expect(page.locator('.pump-chart-legend').first()).toContainText('Sans relevé');
+ await expect(page.locator('.thermal-pump-card').first()).toContainText('température du ballon');
+ await expect(page.locator('.thermal-pump-card').nth(1)).toContainText('température de départ');
+ await expect(page.locator('.pump-thermal-area .recharts-area-area')).toHaveCount(3);
+ const paths=await page.locator('.pump-thermal-area .recharts-area-area').evaluateAll(nodes=>nodes.map(node=>({path:node.getAttribute('d'),clip:node.getAttribute('clip-path')})));
+ expect(paths.every(item=>item.path?.length>100&&item.clip?.startsWith('url(#pump-'))).toBe(true);
  await expect(page.getByRole('button',{name:'Extérieur',exact:true})).toBeVisible();
- const segment=page.locator('.pump-segment.running').first();await segment.click();
+ await page.locator('.pump-segment.running').first().click();
  await expect(page.getByRole('button',{name:'Effacer le repère'})).toBeVisible();
- await expect(page.locator('.pump-cursor')).toHaveCount(3);
- await expect(page.locator('.recharts-reference-line')).toHaveCount(2);
- const marker=await page.locator('.pump-cursor').first().boundingBox();
+ await expect(page.locator('.recharts-reference-line')).toHaveCount(5);
+ await expect(page.locator('.time-cursor-label')).toHaveCount(5);
+ const marker=await page.locator('.recharts-reference-line line').first().boundingBox();
  for(const reference of await page.locator('.recharts-reference-line line').all()) {const bounds=await reference.boundingBox();expect(Math.abs(bounds.x-marker.x)).toBeLessThan(2);}
  await page.getByRole('button',{name:'Effacer le repère'}).click();
- await expect(page.locator('.pump-cursor')).toHaveCount(0);
+ await expect(page.locator('.recharts-reference-line')).toHaveCount(0);
+ const segments=page.locator('.thermal-pump-card').first().locator('.pump-segment');
+ await segments.first().focus();await segments.first().press('ArrowRight');
+ await expect(segments.nth(1)).toBeFocused();await segments.nth(1).press('Enter');
+ await expect(page.locator('.time-cursor-label')).toHaveCount(5);
+ await page.getByRole('button',{name:'Effacer le repère'}).click();
+ const fullTicks=await page.locator('.global-temperatures-card .time-axis-tick').allTextContents();
  await page.getByRole('button',{name:'1 h',exact:true}).click();
  await expect(page.getByRole('button',{name:'1 h',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('.thermal-pump-card')).toHaveCount(3);
+ await expect(page.locator('.global-temperatures-card .time-axis-tick').first()).not.toHaveText(fullTicks[0]);
+ const hourTicks=await page.locator('.global-temperatures-card .time-axis-tick').allTextContents();
+ expect(hourTicks.length).toBeGreaterThanOrEqual(2);
+ expect(hourTicks.every(tick=>/^\d{2}:\d{2}$/.test(tick))).toBe(true);
  await page.getByRole('button',{name:'7 jours',exact:true}).click();
  await expect(page.getByRole('button',{name:'7 jours',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('.global-temperatures-card .time-axis-tick').first()).toContainText(/\d{2} [a-zéû.]+/);
  await page.locator('.efficiency-note > summary').click();
  await expect(page.locator('.efficiency-note')).toContainText('aucun rendement n’est calculé');
+});
+
+test('touch mobile: zoom, directly readable times, thermal pump selection and clearing',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,locale:'fr-FR',timezoneId:'Europe/Paris'});
+ const page=await context.newPage();
+ try {
+  await page.goto('http://127.0.0.1:4173/okoko-v3/#/analyse');
+  await page.getByRole('button',{name:'1 h',exact:true}).tap();
+  const pump=page.locator('.thermal-pump-card').nth(1);
+  await expect(pump.locator('.pump-segment.running').first()).toBeVisible();
+  await pump.locator('.pump-segment.running').first().tap();
+  await expect(page.locator('.time-cursor-label')).toHaveCount(5);
+  const labels=await pump.locator('.time-axis-tick').allTextContents();
+  expect(labels.length).toBeGreaterThanOrEqual(3);
+  expect(labels.every(label=>/^\d{2}:\d{2}$/.test(label))).toBe(true);
+  const ticks=await pump.locator('.time-axis-tick').all();
+  for(let i=1;i<ticks.length;i++) {
+   const left=await ticks[i-1].boundingBox(),right=await ticks[i].boundingBox();
+   expect(left.x+left.width).toBeLessThan(right.x);
+  }
+  await page.evaluate(()=>window.scrollTo(0,0));
+  await page.screenshot({path:'../docs/screenshots/mobile-analyse-zoom.png',fullPage:true});
+  await page.getByRole('button',{name:'Effacer le repère'}).tap();
+  await expect(page.locator('.recharts-reference-line')).toHaveCount(0);
+ } finally {await context.close();}
 });

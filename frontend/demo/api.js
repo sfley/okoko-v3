@@ -25,7 +25,13 @@ export async function demoRequest(path, options = {}) {
     }
     throw new Error('Cette commande n’est pas disponible en démonstration.');
   }
-  if (name === 'operation') return demoOperation(data.history,Math.min(30,Math.max(1,Number(url.searchParams.get('days'))||1)));
+  if (name === 'operation') {
+    const hours=Number(url.searchParams.get('hours'));
+    // Zoom returns the original ten-minute demo readings, rather than stretching them over a month.
+    const result=demoOperation(data.history,hours?1:Math.min(30,Math.max(1,Number(url.searchParams.get('days'))||1)));
+    if(hours===1||hours===6)result.from=new Date(Date.parse(result.to)-hours*3600000).toISOString();
+    return result;
+  }
   if (name === 'snapshot') return copy({...data.snapshot,last_seen:new Date().toISOString()});
   if (name === 'pellets') return copy({...data.pellets,refills:[...extraRefills,...data.pellets.refills]});
   if (name === 'history') {

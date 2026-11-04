@@ -73,3 +73,10 @@ La page Système télécharge un ZIP SQLite cohérent, y compris les modificatio
 Après la mise à jour, les lectures JSON habituelles enregistrent aussi les températures, la modulation et les états de pompe dans une table SQLite séparée. Aucune nouvelle adresse de chaudière ni fréquence de collecte n’est nécessaire. La conservation suit `retention_days`. Les archives existantes peuvent compléter le début de la période ; un passé sans relevés n’est pas reconstruit.
 
 Le lanceur effectue sa sauvegarde avant le remplacement du programme. Le schéma ajoute la table sans supprimer ni remplacer les données existantes. Un retour au binaire précédent reste possible.
+
+
+### Températures de départ à partir de 3.0.4
+
+La mise à jour ajoute automatiquement deux colonnes nullables à l’historique de fonctionnement. Les anciennes données JSON n’ayant pas enregistré les températures de départ, elles restent indisponibles pour ces dates ; les nouveaux relevés les alimentent sans solliciter davantage la chaudière. Les archives CSV antérieures au suivi JSON peuvent déjà contenir ces valeurs. Les ambiances ne remplacent jamais une température de départ manquante. Pour l’ECS, le graphique affiche la température du ballon.
+
+La version [v3.0.3](https://github.com/sfley/okoko-v3/releases/tag/v3.0.3) reste disponible. Ses requêtes SQLite nomment leurs colonnes et tolèrent les deux colonnes supplémentaires ; les procédures de sauvegarde et de retour arrière du lanceur unique restent applicables.

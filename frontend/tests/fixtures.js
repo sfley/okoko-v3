@@ -48,6 +48,7 @@ export function fixtures() {
     outdoor: 12 + Math.sin(i / 30) * 3,
     hk1: 20.2 + Math.sin(i / 16) * 0.6,
     hk2: 19 + Math.sin(i / 20) * 0.5,
+    hk1_flow: 31 + Math.sin(i / 13) * 7, hk2_flow: 29 + Math.sin(i / 19) * 5,
     ww1: 48 + Math.sin(i / 10) * 5,
     modulation: i%28<19 ? 32 + Math.sin(i / 13) * 18 : 0,
     hk1_pump:i%72>20?1:0,hk2_pump:i%96>6&&i%96<55?1:0,ww1_pump:i%72>=9&&i%72<15?1:0,

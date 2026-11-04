@@ -35,7 +35,7 @@ func TestBrowserFixtureServer(t *testing.T) {
 		if i == 8 {
 			modulation = 0
 		}
-		_, err := a.db.Exec(`INSERT INTO operation_samples(ts,hk1,hk2,ww1,outdoor,modulation,hk1_pump,hk2_pump,ww1_pump,interval_seconds) VALUES(?,19.6,20.6,39.7,13.1,?,?,?,?,60)`, time.Now().Add(time.Duration(i-8)*time.Minute).UnixMilli(), modulation, (i+1)%2, hk2, ecs)
+		_, err := a.db.Exec(`INSERT INTO operation_samples(ts,hk1,hk2,ww1,outdoor,hk1_flow,hk2_flow,modulation,hk1_pump,hk2_pump,ww1_pump,interval_seconds) VALUES(?,19.6,20.6,39.7,13.1,?,?, ?,?,?,?,60)`, time.Now().Add(time.Duration(i-8)*time.Minute).UnixMilli(), 27.7+float64(i)/2, 29+float64(i)/3, modulation, (i+1)%2, hk2, ecs)
 		if err != nil {
 			t.Fatal(err)
 		}

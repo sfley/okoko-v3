@@ -1,6 +1,6 @@
 {
   "name": "okoko-v3",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "private": true,
   "description": "Supervision locale \u00d6koFEN \u2014 Go, SQLite et React",
   "license": "MIT",

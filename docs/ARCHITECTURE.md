@@ -15,7 +15,7 @@ Le code de collecte, le schéma SQLite, les imports CSV et journaux HTTP ainsi q
 | Méthode | Route | Fonction |
 |---|---|---|
 | GET | `/api/v3/snapshot` | Cache temps réel, fraîcheur, circuits et pellets ; aucun appel chaudière |
-| GET | `/api/v3/operation?days=1` | Frise des pompes, températures et modulation ; relevés JSON séparés et archives antérieures |
+| GET | `/api/v3/operation?days=1` | États des pompes, températures ambiantes/de départ et modulation ; relevés JSON séparés et archives antérieures |
 | GET | `/api/v3/history?days=1` | Mesures historiques réelles, échantillonnage temporel borné, NULL préservés |
 | GET | `/api/v3/pellets` | Mois archivés/corrigés et liste de recharges existante |
 | GET | `/api/v3/weather` | Données météo effectivement reçues de la chaudière |
@@ -59,12 +59,16 @@ Le format de disposition passe à la version 2, sous les mêmes clés de stockag
 
 Le journal paginé renvoie `events`, `pagination` et `summary`. Sans paramètre, l’API conserve l’ancien tableau limité à 100 pour les clients existants. Le tri utilise `julianday(ts)` et l’identifiant ; les dates RFC3339 à décalages différents restent dans l’ordre chronologique réel. Les filtres et compteurs s’appliquent avant pagination. Aucune observation n’est supprimée ou reconstituée.
 
-## Analyse du fonctionnement (3.0.3)
+## Analyse du fonctionnement (3.0.4)
 
 Les relevés JSON déjà effectués alimentent `operation_samples`, sans nouvelle requête chaudière. Cette table ne contient ni stock, ni consommation, ni JSON brut. `measurements` conserve son rôle pour les calculs de pellets, les imports CSV et les anciens exports. Les données JSON du fonctionnement ne sont pas injectées dans ces calculs.
 
 `/api/v3/operation` accepte 1 à 30 jours. Les archives CSV précèdent le premier relevé JSON ; ensuite les observations JSON font foi et les interruptions restent visibles. Les segments de pompe sont construits avant l’échantillonnage des courbes. Les valeurs inconnues cassent les segments ; les intervalles supérieurs à trois cadences sont laissés vides. Le dernier état est prolongé seulement jusqu’au prochain relevé rapproché, jamais au-delà du dernier relevé disponible.
 
-La réponse est bornée à 6 000 points et 2 000 segments par pompe ; si une limite est dépassée, la série correspondante est signalée comme trop dense et demande une période plus courte. Le zoom 1 h/6 h est local aux données chargées ; le repère et les axes sont communs aux trois graphiques.
+La réponse est bornée à 6 000 points et 2 000 segments par pompe ; si une limite est dépassée, la série correspondante est signalée comme trop dense et demande une période plus courte. Le paramètre facultatif `hours=1` ou `hours=6` relit uniquement cette fenêtre dans SQLite, avec un échantillonnage plus fin. Aucun appel chaudière n’est ajouté. Le repère et l’axe temporel sont communs aux cinq graphiques. Les extrema de toutes les séries et les lectures encadrant les changements de pompe sont préservés lors de l’échantillonnage.
+
+Deux colonnes REAL nullables, `hk1_flow` et `hk2_flow`, sont ajoutées à `operation_samples` lors de la première ouverture en 3.0.4. Les anciens relevés restent sans température de départ. Les archives CSV utilisent les colonnes homonymes déjà présentes dans `measurements`, sans modifier l’import. La migration est répétable et ne réécrit aucune ligne.
+
+Dans chaque graphique de pompe, une courbe fine représente la température réelle ; un masque SVG colore l’aire uniquement sur les segments déclarés en marche. La bande inférieure distingue marche, arrêt et absence de relevé même si la température manque. L’ECS utilise la température du ballon (`L_ontemp_act`), les HK utilisent `L_flowtemp_act`. La hauteur n’est ni un débit ni une puissance calorifique.
 
 Pour l’ECS, les champs `temperature_on`, `temperature_off`, `sensor_on` et `sensor_off` décrivent les rôles et sélections déclarés, sans position physique supposée. L’ancien alias `temperature_low` est conservé seulement pour compatibilité.

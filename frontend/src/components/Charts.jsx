@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { Empty } from "./UI";
 import { dateLabel, value } from "../api";
+import { timeAxisProps, useChartWidth, TimeCursor } from './TimeAxis';
 const colors = {
   hk1: "#5bbcb4",
   hk2: "#8e9af1",
@@ -66,9 +67,11 @@ export function HistoryChart({
   onSelectTime,
 }) {
   const [hidden, setHidden] = useState([]);
+  const [canvasRef,canvasWidth]=useChartWidth();
   const id = useId().replaceAll(":", "");
   const chartData = useMemo(() => data.map(row => ({...row,_time:Date.parse(row.ts)})).filter(row=>Number.isFinite(row._time)),[data]);
   const labels = { ...names, ...Object.fromEntries(Object.entries(snapshot?.circuits || {}).filter(([, c]) => c.name).map(([id, c]) => [id, c.name])) };
+  const axisDomain=timeDomain || [chartData[0]?._time,chartData.at(-1)?._time];
   if (!data.some((row) => keys.some((k) => typeof row[k] === "number")))
     return (
       <Empty compact={compact} title="L’historique prend forme ici">
@@ -94,12 +97,12 @@ export function HistoryChart({
         ))}
         <span>{unit}</span>
       </div>
-      <div className="chart-canvas">
+      <div className="chart-canvas" ref={canvasRef}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <AreaChart
             data={chartData}
             onClick={event=>{if(typeof event?.activeLabel === 'number')onSelectTime?.(event.activeLabel);}}
-            margin={{ left: -22, right: 10, top: 12, bottom: 0 }}
+            margin={{ left: 0, right: 24, top: 12, bottom: 0 }}
           >
             <defs>
               {keys.map((k) => (
@@ -121,20 +124,9 @@ export function HistoryChart({
               strokeDasharray="3 5"
               vertical={false}
             />
-            <XAxis
-              dataKey="_time"
-              type="number"
-              scale="time"
-              domain={timeDomain || ['dataMin','dataMax']}
-              axisLine={false}
-              tickLine={false}
-              minTickGap={45}
-              tick={{ fill: "#8495a5", fontSize: 11 }}
-              tickFormatter={(t) =>
-                dateLabel(new Date(t).toISOString(), { hour: "2-digit", minute: "2-digit" })
-              }
-            />
+            <XAxis {...timeAxisProps(axisDomain,canvasWidth)}/>
             <YAxis
+              width={42}
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#8495a5", fontSize: 11 }}
@@ -144,11 +136,11 @@ export function HistoryChart({
               content={<ChartTooltip unit={unit} />}
               cursor={{ stroke: "#647684", strokeDasharray: "3 3" }}
             />
-            {cursorTime !== null && <ReferenceLine x={cursorTime} stroke="#abc7ce" strokeDasharray="4 4" />}
+            {cursorTime !== null && <ReferenceLine x={cursorTime} stroke="#abc7ce" strokeDasharray="4 4" label={<TimeCursor at={cursorTime}/>} />}
             {keys.map((k) => (
               <Area
                 key={k}
-                type="monotone"
+                type="linear"
                 dataKey={k}
                 name={labels[k]}
                 stroke={colors[k]}

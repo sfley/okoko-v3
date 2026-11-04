@@ -24,7 +24,7 @@ import (
 	"unicode/utf8"
 )
 
-const Version = "3.0.3"
+const Version = "3.0.4"
 
 type Config struct {
 	Timezone             string `json:"timezone"`
@@ -131,6 +131,9 @@ CREATE TABLE IF NOT EXISTS recharge_tombstones(ts TEXT PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS monthly_overrides(year INTEGER,month INTEGER,kg REAL NOT NULL,original_kg REAL,PRIMARY KEY(year,month));
 CREATE TABLE IF NOT EXISTS daily_consumption(date TEXT PRIMARY KEY,kg REAL NOT NULL, anomalies INTEGER NOT NULL DEFAULT 0, samples INTEGER NOT NULL DEFAULT 0);`)
 	if e != nil {
+		return e
+	}
+	if e = a.initOperationFlow(); e != nil {
 		return e
 	}
 	for _, q := range []string{

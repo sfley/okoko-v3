@@ -21,14 +21,14 @@ func (a *App) recordOperation(parent context.Context, m map[string]any, at time.
 		}
 		return int(n)
 	}
-	_, err := a.db.ExecContext(ctx, `INSERT OR IGNORE INTO operation_samples(ts,hk1,hk2,ww1,outdoor,modulation,hk1_pump,hk2_pump,ww1_pump,interval_seconds) VALUES(?,?,?,?,?,?,?,?,?,?)`,
-		at.UnixMilli(), temperature(m, "hk1", "L_roomtemp_act"), temperature(m, "hk2", "L_roomtemp_act"), temperature(m, "ww1", "L_ontemp_act"), temperature(m, "system", "L_ambient"), number(m, "pe1", "L_modulation"), pump("hk1"), pump("hk2"), pump("ww1"), max(10, a.cfg.PollSeconds))
+	_, err := a.db.ExecContext(ctx, `INSERT OR IGNORE INTO operation_samples(ts,hk1,hk2,ww1,outdoor,modulation,hk1_flow,hk2_flow,hk1_pump,hk2_pump,ww1_pump,interval_seconds) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`,
+		at.UnixMilli(), temperature(m, "hk1", "L_roomtemp_act"), temperature(m, "hk2", "L_roomtemp_act"), temperature(m, "ww1", "L_ontemp_act"), temperature(m, "system", "L_ambient"), number(m, "pe1", "L_modulation"), temperature(m, "hk1", "L_flowtemp_act"), temperature(m, "hk2", "L_flowtemp_act"), pump("hk1"), pump("hk2"), pump("ww1"), max(10, a.cfg.PollSeconds))
 	return err
 }
 
 type operationReading struct {
 	at       time.Time
-	values   [5]sql.NullFloat64
+	values   [7]sql.NullFloat64
 	pumps    [3]int
 	interval int
 }
@@ -56,7 +56,7 @@ func (p *operationPlot) point(r operationReading) {
 		return
 	}
 	item := map[string]any{"ts": operationTime(r.at)}
-	for i, key := range []string{"hk1", "hk2", "ww1", "outdoor", "modulation"} {
+	for i, key := range []string{"hk1", "hk2", "ww1", "outdoor", "modulation", "hk1_flow", "hk2_flow"} {
 		item[key] = nil
 		if r.values[i].Valid && !math.IsNaN(r.values[i].Float64) && !math.IsInf(r.values[i].Float64, 0) {
 			item[key] = r.values[i].Float64
@@ -84,6 +84,11 @@ func (p *operationPlot) add(r operationReading) {
 			if value.Valid != p.previous.values[i].Valid {
 				missingEdge = true
 				break
+			}
+		}
+		for i, state := range r.pumps {
+			if state != p.previous.pumps[i] {
+				missingEdge = true
 			}
 		}
 	}
@@ -118,18 +123,24 @@ func (p *operationPlot) add(r operationReading) {
 		p.spans[lane] = append(spans, pumpSpan{Start: operationTime(r.at), End: operationTime(r.at), State: state})
 		p.active[lane] = true
 	}
-	bucket := r.at.Sub(p.from).Milliseconds() / max(int64(1), p.to.Sub(p.from).Milliseconds()/400)
+	bucket := r.at.Sub(p.from).Milliseconds() / max(int64(1), p.to.Sub(p.from).Milliseconds()/300)
 	if len(p.selected) == 0 || bucket != p.bucket {
 		p.flush()
 		p.bucket = bucket
-		p.selected = []operationReading{r, r, r, r}
+		p.selected = make([]operationReading, 2+2*len(r.values))
+		for i := range p.selected {
+			p.selected[i] = r
+		}
 	} else {
 		p.selected[1] = r
-		if r.values[4].Valid && (!p.selected[2].values[4].Valid || r.values[4].Float64 < p.selected[2].values[4].Float64) {
-			p.selected[2] = r
-		}
-		if r.values[4].Valid && (!p.selected[3].values[4].Valid || r.values[4].Float64 > p.selected[3].values[4].Float64) {
-			p.selected[3] = r
+		for i, value := range r.values {
+			low, high := 2+2*i, 3+2*i
+			if value.Valid && (!p.selected[low].values[i].Valid || value.Float64 < p.selected[low].values[i].Float64) {
+				p.selected[low] = r
+			}
+			if value.Valid && (!p.selected[high].values[i].Valid || value.Float64 > p.selected[high].values[i].Float64) {
+				p.selected[high] = r
+			}
 		}
 	}
 	copy := r
@@ -150,6 +161,15 @@ func (a *App) operationV3(w http.ResponseWriter, r *http.Request) {
 	location := a.location()
 	until := time.Now().UTC()
 	from := until.Add(-time.Duration(days) * 24 * time.Hour)
+	// Zoom queries reread SQLite at the finer resolution, never the boiler.
+	if raw := r.URL.Query().Get("hours"); raw != "" {
+		hours, err := strconv.Atoi(raw)
+		if err != nil || (hours != 1 && hours != 6) {
+			http.Error(w, "Zoom invalide (1 ou 6 heures)", 400)
+			return
+		}
+		from = until.Add(-time.Duration(hours) * time.Hour)
+	}
 	plot := operationPlot{from: from, to: until, points: []map[string]any{}, spans: [3][]pumpSpan{{}, {}, {}}}
 	var first sql.NullInt64
 	if err := a.db.QueryRowContext(ctx, `SELECT MIN(ts) FROM operation_samples WHERE ts<=?`, until.UnixMilli()).Scan(&first); err != nil {
@@ -171,7 +191,7 @@ func (a *App) operationV3(w http.ResponseWriter, r *http.Request) {
 			var raw string
 			var entry operationReading
 			var pumps [3]sql.NullFloat64
-			if err := rows.Scan(&raw, &entry.values[0], &entry.values[1], &entry.values[2], &entry.values[3], &entry.values[4], &pumps[0], &pumps[1], &pumps[2], &entry.interval); err != nil {
+			if err := rows.Scan(&raw, &entry.values[0], &entry.values[1], &entry.values[2], &entry.values[3], &entry.values[4], &entry.values[5], &entry.values[6], &pumps[0], &pumps[1], &pumps[2], &entry.interval); err != nil {
 				return err
 			}
 			if jsonSource {
@@ -191,7 +211,7 @@ func (a *App) operationV3(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			for i, v := range entry.values {
-				if v.Valid && (math.IsNaN(v.Float64) || math.IsInf(v.Float64, 0) || (i < 4 && (v.Float64 == -32768 || v.Float64 == 32767))) {
+				if v.Valid && (math.IsNaN(v.Float64) || math.IsInf(v.Float64, 0) || (i != 4 && (v.Float64 == -32768 || v.Float64 == 32767))) {
 					entry.values[i].Valid = false
 				}
 			}
@@ -211,13 +231,13 @@ func (a *App) operationV3(w http.ResponseWriter, r *http.Request) {
 		return rows.Err()
 	}
 	if csvEnd.After(from) {
-		err := read(`SELECT ts,hk1_room,hk2_room,dhw_in,ext,modulation,hk1_pump,hk2_pump,dhw_pump,60 FROM measurements WHERE ts>=? AND ts<? ORDER BY ts`, []any{from.In(location).Format("2006-01-02T15:04:05"), csvEnd.In(location).Format("2006-01-02T15:04:05")}, false)
+		err := read(`SELECT ts,hk1_room,hk2_room,dhw_in,ext,modulation,hk1_flow,hk2_flow,hk1_pump,hk2_pump,dhw_pump,60 FROM measurements WHERE ts>=? AND ts<? ORDER BY ts`, []any{from.In(location).Format("2006-01-02T15:04:05"), csvEnd.In(location).Format("2006-01-02T15:04:05")}, false)
 		if err != nil {
 			http.Error(w, "Archives de fonctionnement indisponibles", 503)
 			return
 		}
 	}
-	if err := read(`SELECT CAST(ts AS TEXT),hk1,hk2,ww1,outdoor,modulation,hk1_pump,hk2_pump,ww1_pump,interval_seconds FROM operation_samples WHERE ts>=? AND ts<=? ORDER BY ts`, []any{from.UnixMilli(), until.UnixMilli()}, true); err != nil {
+	if err := read(`SELECT CAST(ts AS TEXT),hk1,hk2,ww1,outdoor,modulation,hk1_flow,hk2_flow,hk1_pump,hk2_pump,ww1_pump,interval_seconds FROM operation_samples WHERE ts>=? AND ts<=? ORDER BY ts`, []any{from.UnixMilli(), until.UnixMilli()}, true); err != nil {
 		http.Error(w, "Relevés de fonctionnement indisponibles", 503)
 		return
 	}

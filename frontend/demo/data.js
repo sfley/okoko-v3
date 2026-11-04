@@ -10,6 +10,7 @@ export function createDemoData(now = new Date()) {
   };
   const history = Array.from({ length: 144 }, (_, i) => ({
     ts: new Date(+now - (143-i)*600000).toISOString(), hk1: 20.3 + Math.sin(i/16)*0.5, hk2: 19.8 + Math.sin(i/20)*0.3,
+    hk1_flow: 31 + Math.sin(i / 13) * 7, hk2_flow: 29 + Math.sin(i / 19) * 5,
     ww1: 48 + Math.sin(i/10)*5, outdoor: 11 + Math.sin(i/30)*3, hk1_pump: i%72>20?1:0, hk2_pump:i%96>6&&i%96<55?1:0, ww1_pump:i%72>=9&&i%72<15?1:0,
     modulation: i%28<19 ? 32 + Math.sin(i/13)*18 : 0, stock: 1500-i*0.2,
   }));
@@ -24,7 +25,7 @@ export function createDemoData(now = new Date()) {
   }).flat();
   const monthly = Array.from({ length: Number(today.slice(5,7)) }, (_, i) => ({ year: Number(today.slice(0,4)), month: i+1, kg: [320,270,221,154,72,35,23,29,86,180,260,310][i] }));
   return {
-    snapshot: { version:'3.0.3', demo:true, timezone:'Europe/Paris', configured:true, connected:true, stale:false, last_seen:instant, poll_seconds:60,
+    snapshot: { version:'3.0.4', demo:true, timezone:'Europe/Paris', configured:true, connected:true, stale:false, last_seen:instant, poll_seconds:60,
       boiler:{ temperature:64.2, modulation:36, flame:312, airflow:42, pressure:78, pump:40, runtime:18437, starts:4218, average_runtime:47, status:'Chauffage actif|Fonctionnement modulant' },
       outdoor:12.8, circuits, pellets:{stock:1470,capacity:2200,today:8.4,yesterday:10.2},
     },
@@ -35,7 +36,7 @@ export function createDemoData(now = new Date()) {
       return {id:18-i,ts:new Date(+now-i*900000).toISOString(),circuit,kind:pump?'pump':'status0',before:pump?'0':(circuit==='pe1'?'Arrêt':'Mode réduit'),after:pump?'1':(circuit==='pe1'?'Chauffage actif':'Mode confort')};
     }),
     pellets:{monthly,refills:[{date:new Date(+now-30*86400000).toISOString(),kg:2000,supplier:'Fournisseur de démonstration',kind:'Vrac',note:'Recharge fictive'}]},
-    system:{version:'3.0.3',timezone:'Europe/Paris',sqlite:true,measurements:184320,files:128,nas_configured:true,nas_mounted:true,import_active:false,import_minutes:60,
+    system:{version:'3.0.4',timezone:'Europe/Paris',sqlite:true,measurements:184320,files:128,nas_configured:true,nas_mounted:true,import_active:false,import_minutes:60,
       runs:Array.from({length:25},(_,i)=>({id:25-i,at:new Date(+now-i*3600000).toISOString(),time_known:true,source:i%2?'CSV · Démo':'JSON · Démo',read:1440,added:i?1440:1420,duplicates:i?0:20,error:''})),
     },
   };

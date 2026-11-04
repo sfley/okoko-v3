@@ -350,6 +350,9 @@ test('real Go operating history drives the pump timeline without fabricated peri
  const response=await request.get(`${base}/api/v3/operation?days=1`);const operation=await response.json();
  expect(operation.sources.json).toBe(true);expect(operation.pumps.hk1.length).toBeGreaterThan(1);
  expect(operation.points.some(row=>row.modulation===40)).toBe(true);
+ expect(operation.points.some(row=>row.hk1_flow===27.7&&row.hk2_flow===29)).toBe(true);
+ const detail=await (await request.get(`${base}/api/v3/operation?days=30&hours=1`)).json();
+ expect(detail.points.length).toBe(9);
  await page.goto(`${base}/analyse`);
  await expect(page.locator('.pump-segment.running').first()).toBeVisible();
  await expect(page.getByRole('heading',{name:'Modulation de la chaudière',exact:true})).toBeVisible();
@@ -357,5 +360,17 @@ test('real Go operating history drives the pump timeline without fabricated peri
  await page.getByRole('button',{name:'1 h',exact:true}).click();
  const segment=page.locator('.pump-segment.running').first();expect((await segment.boundingBox()).width).toBeGreaterThan(5);
  await segment.click();
- await expect(page.locator('.recharts-reference-line')).toHaveCount(2);
+ await expect(page.locator('.recharts-reference-line')).toHaveCount(5);
+});
+
+
+test('missing flow history keeps real pump states without substituting room temperatures',async({page})=>{
+ const data=fixtures();
+ for(const point of data.operation.points) {point.hk1_flow=null;point.hk2_flow=null;}
+ await mock(page,data);
+ await page.goto('/analyse');
+ await expect(page.locator('.pump-missing-temperature')).toHaveCount(2);
+ await expect(page.locator('.thermal-pump-card').nth(1).locator('.pump-segment.running').first()).toBeVisible();
+ await expect(page.locator('.thermal-pump-card').nth(1).locator('.recharts-area-area')).toHaveCount(0);
+ await expect(page.locator('.thermal-pump-card').first().locator('.pump-missing-temperature')).toHaveCount(0);
 });
