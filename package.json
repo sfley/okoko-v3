@@ -1,8 +1,8 @@
 {
   "name": "okoko-v3",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "private": true,
-  "description": "Supervision locale \u00d6koFEN \u2014 Go, SQLite et React",
+  "description": "Supervision locale ÖkoFEN — Go, SQLite et React",
   "license": "MIT",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

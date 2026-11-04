@@ -1,6 +1,6 @@
 # OKOKO 3.0.5 — rapprocher l’eau et le confort
 
-Livraison du 4 novembre 2026.
+Préparation du 4 novembre 2026, remplacée par la [3.0.6](CHANGEMENTS-3.0.6.md) avant livraison. La validation GitHub a détecté un fichier de dépendances incohérent à l’installation ; aucune archive 3.0.5 n’a été publiée.
 
 - Ajout de la température réelle de la pièce, en pointillés clairs, dans les graphiques de pompe Chambres/HK1 et Plancher/HK2.
 - Courbe d’ambiance visible pendant les marches et les arrêts de pompe ; l’eau reste colorée seulement pendant la marche.
